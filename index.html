@@ -16,28 +16,28 @@ flowchart TB
   classDef api fill:#bbf,stroke:#333,stroke-width:1px;
   classDef ci fill:#bfb,stroke:#333,stroke-width:1px;
 
-  subgraph Module_Publishing[Module Publishing (VCS-driven)]
-    M1[Connect VCS repo (UI)]:::ui
-    M2[Detect versions via git tags (auto)]
-    M3[Import README, inputs, outputs (UI)]:::ui
-    M4[Publish / Manage versions (UI)]:::ui
+  subgraph Module_Publishing["Module Publishing (VCS-driven)"]
+    M1["Connect VCS repo (UI)"]:::ui
+    M2["Detect versions via git tags (auto)"]
+    M3["Import README, inputs, outputs (UI)"]:::ui
+    M4["Publish / Manage versions (UI)"]:::ui
     M1 --> M2 --> M3 --> M4
   end
 
-  subgraph Provider_Publishing[Provider Publishing (API/Artifact-driven)]
-    P1[Create provider platform: namespace/name (UI)]:::ui
-    P2[Configure metadata & permissions (UI)]:::ui
-    P3[Build artifacts in CI: binaries per OS/arch (CI)]:::ci
-    P4[Compute checksums & signatures (CI/UI)]:::ci
-    P5[Upload artifacts via Registry API (API)]:::api
-    P6[Register release/version via API (API)]:::api
-    P7[Attach docs, examples, and changelog (UI/API)]:::ui
-    P8[Security scans & verification (CI/API)]:::ci
-    P9[Publish & listing becomes discoverable (UI)]:::ui
+  subgraph Provider_Publishing["Provider Publishing (API/Artifact-driven)"]
+    P1["Create provider platform: namespace/name (UI)"]:::ui
+    P2["Configure metadata & permissions (UI)"]:::ui
+    P3["Build artifacts in CI: binaries per OS/arch (CI)"]:::ci
+    P4["Compute checksums & signatures (CI/UI)"]:::ci
+    P5["Upload artifacts via Registry API (API)"]:::api
+    P6["Register release/version via API (API)"]:::api
+    P7["Attach docs, examples, and changelog (UI/API)"]:::ui
+    P8["Security scans & verification (CI/API)"]:::ci
+    P9["Publish & listing becomes discoverable (UI)"]:::ui
 
     P1 --> P2 --> P3 --> P4 --> P5 --> P6 --> P7 --> P8 --> P9
 
-    P2 -->|if missing CI| ShowAPI[Show API + CI snippets for upload (UI)]:::ui
+    P2 -->|if missing CI| ShowAPI["Show API + CI snippets for upload (UI)"]:::ui
     P3 -->|multiple binaries| P5
     P5 -->|returns upload status| P6
     ShowAPI --> P3
