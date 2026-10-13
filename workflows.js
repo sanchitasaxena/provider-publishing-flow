@@ -582,14 +582,7 @@ export function validateKey(
   existingKeys,
 ) {
   if (!title.trim()) return "Enter a title for this GPG key.";
-  if (/PRIVATE KEY/i.test(key))
-    return "Private keys must never be uploaded. Paste only a public key.";
-  if (
-    !/^-----BEGIN PGP PUBLIC KEY BLOCK-----\r?\n[\s\S]+\r?\n-----END PGP PUBLIC KEY BLOCK-----$/.test(
-      key.trim(),
-    )
-  )
-    return "Enter a public key block with BEGIN and END PGP PUBLIC KEY BLOCK markers.";
+  if (!key.trim()) return "Enter mock text for this GPG key.";
   if (sourceURL) {
     let url;
     try {
@@ -652,7 +645,7 @@ export function KeyDialog({ scope, onClose, onSubmit, existingKeys }) {
       h(
         "p",
         { className: "prototype-note" },
-        "Prototype only: use sample data, not real keys. No cryptographic verification or upload takes place. IDs are simulated.",
+        "Prototype only: enter any mock key text, not real keys. Title and Public key are required. No key format validation, cryptographic verification, or upload takes place. IDs are simulated.",
       ),
       scope === "public" &&
         field(
@@ -681,7 +674,7 @@ export function KeyDialog({ scope, onClose, onSubmit, existingKeys }) {
         h("textarea", {
           value: key,
           onChange: (event) => setKey(event.target.value),
-          placeholder: "-----BEGIN PGP PUBLIC KEY BLOCK-----",
+          placeholder: "Enter any mock key text (e.g. demo-signing-key)",
           required: true,
           "aria-describedby": error ? "key-error" : undefined,
           "aria-invalid": Boolean(error),

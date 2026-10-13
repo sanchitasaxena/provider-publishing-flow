@@ -20,9 +20,10 @@ No build step or backend is required.
 - **New GPG Key** lets you choose a scope; public keys also require a namespace.
 - The empty state and the blocked **Publish > Provider** menu offer an add-key
   shortcut. Adding a private key enables publishing; public keys do not.
-- Use **Use sample public key** to populate an illustrative key. The form checks
-  title, public-key block markers, source URL, and duplicates in the same scope
-  and namespace. Private-key blocks are rejected.
+- Enter any mock key text or use **Use sample public key** to populate an
+  illustrative key. Title and Public key must contain non-whitespace text;
+  no real key or specific key format is required. Source URL and duplicate
+  checks in the same scope and namespace remain in place.
 - Cancel, Close, and Escape dismiss the dialog without saving. Dialogs trap focus
   and return it to the triggering control.
 - Delete requires confirmation and explains the effect on future releases.
