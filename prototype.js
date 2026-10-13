@@ -6,7 +6,7 @@ import {
   KeyCard,
   ConfirmKeyDeletion,
   PROVIDERS,
-} from "./workflows.js";
+} from "./workflows.js?v=mock-keys-1";
 var C = {
     arrowRight: `./assets/816b2.svg`,
     aws: `./assets/6aa6a.svg`,
