@@ -1518,19 +1518,19 @@ function ve({ onCancel: e, onComplete: t, onDeleteProvider }) {
       hasErrors
         ? b.createElement(w, { src: C.statusWarning })
         : i
-        ? b.createElement(`span`, {
-            className: `status-cancelled-mark`,
-            children: `×`,
-          })
-        : o
           ? b.createElement(`span`, {
-              className: `status-complete-mark`,
-              children: `✓`,
+              className: `status-cancelled-mark`,
+              children: `×`,
             })
-          : b.createElement(`span`, {
-              className: `loading-icon`,
-              children: b.createElement(w, { src: C.loading }),
-            }),
+          : o
+            ? b.createElement(`span`, {
+                className: `status-complete-mark`,
+                children: `✓`,
+              })
+            : b.createElement(`span`, {
+                className: `loading-icon`,
+                children: b.createElement(w, { src: C.loading }),
+              }),
       b.createElement(
         `div`,
         {},
@@ -1558,18 +1558,12 @@ function ve({ onCancel: e, onComplete: t, onDeleteProvider }) {
               onClick: e,
               children: `Return to private library`,
             })
-          : !o &&
+          : (!o || hasErrors) &&
               b.createElement(T, {
                 className: `secondary`,
                 onClick: () => setDeleteOpen(true),
-                children: `Cancel`,
+                children: `Delete provider from organization`,
               }),
-        hasErrors &&
-          b.createElement(T, {
-            className: `secondary`,
-            onClick: () => setDeleteOpen(true),
-            children: `Delete provider from organization?`,
-          }),
         o &&
           b.createElement(T, {
             className: `secondary`,

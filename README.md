@@ -68,8 +68,9 @@ Requested explorations that are intentionally different from those frames:
 - Manage is absent on the provider status page.
 - Errored queue rows stay neutral; the icon and “Version ingress incomplete”
   message communicate the failure without a red row background.
-- The status alert offers deletion from the organization after an ingress error.
-  Cancel also opens this confirmation; nothing is removed before confirmation.
+- The status alert has one “Delete provider from organization” action while
+  ingress is running or has errors. There is no separate Cancel action:
+  cancelling setup means deleting the provider. Nothing is removed before confirmation.
   “Keep provider” resumes the queue. “Delete provider” removes the mock provider
   and its versions from the list, preserving organization GPG keys.
 - Completed ingestion stays on the queue until “View provider” is selected,
