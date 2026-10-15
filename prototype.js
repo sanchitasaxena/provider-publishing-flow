@@ -5,8 +5,9 @@ import {
   KeyDialog,
   KeyCard,
   ConfirmKeyDeletion,
+  ConfirmProviderDeletion,
   PROVIDERS,
-} from "./workflows.js?v=mock-keys-1";
+} from "./workflows.js?v=figma-frames-1";
 var C = {
     arrowRight: `./assets/816b2.svg`,
     aws: `./assets/6aa6a.svg`,
@@ -203,11 +204,6 @@ function ne({
                   className: `nav-item`,
                   type: `button`,
                   children: `Tags`,
-                }),
-                b.createElement(`button`, {
-                  className: `nav-item`,
-                  type: `button`,
-                  children: `Testing`,
                 }),
               ),
         ),
@@ -950,6 +946,7 @@ function he({
   libraryTab,
   onLibraryTabChange,
   onSelectProvider,
+  providers,
 }) {
   let [c, l] = (0, b.useState)(!1),
     u = (0, b.useRef)(null);
@@ -1176,7 +1173,7 @@ function he({
       ),
     ),
     libraryTab === `providers`
-      ? b.createElement(ProviderTable, { onSelectProvider })
+      ? b.createElement(ProviderTable, { onSelectProvider, providers })
       : b.createElement(
           `section`,
           {
@@ -1414,7 +1411,7 @@ var ge = [
     outcome: `complete`,
   },
 ];
-function _e({ current: e }) {
+function _e({ current: e, showManage = true, onBack }) {
   return b.createElement(
     b.Fragment,
     {},
@@ -1432,6 +1429,7 @@ function _e({ current: e }) {
       b.createElement(`span`, { children: `/` }),
       b.createElement(`button`, {
         type: `button`,
+        onClick: onBack,
         children: `Private Library`,
       }),
       b.createElement(`span`, { children: `/` }),
@@ -1455,7 +1453,7 @@ function _e({ current: e }) {
       },
       b.createElement(`div`, {
         className: `provider-logo`,
-        children: `aws`,
+        children: b.createElement(w, { src: C.aws, alt: `AWS` }),
       }),
       b.createElement(
         `div`,
@@ -1475,44 +1473,51 @@ function _e({ current: e }) {
           children: `Provider works with Terraform and can do 1 2 3 4 5.`,
         }),
       ),
-      b.createElement(
-        T,
-        {
-          className: `secondary manage-button`,
-        },
-        `Manage`,
-        b.createElement(w, { src: C.caretDown }),
-      ),
+      showManage &&
+        b.createElement(
+          T,
+          {
+            className: `secondary manage-button`,
+          },
+          `Manage`,
+          b.createElement(w, { src: C.caretDown }),
+        ),
     ),
   );
 }
-function ve({ onCancel: e, onComplete: t }) {
+function ve({ onCancel: e, onComplete: t, onDeleteProvider }) {
   let [n, r] = (0, b.useState)(ge.findIndex((e) => e.status === `pending`)),
     [i, a] = (0, b.useState)(!1),
+    [deleteOpen, setDeleteOpen] = b.useState(false),
     o = n >= ge.length;
   (0, b.useEffect)(() => {
-    if (i) return;
+    if (i || o || deleteOpen) return;
     let e = window.setTimeout(
       () => {
-        n < ge.length ? r((e) => e + 1) : t();
+        r((e) => e + 1);
       },
       o ? 1400 : 1800,
     );
     return () => window.clearTimeout(e);
-  }, [n, t, i, o]);
+  }, [n, i, o, deleteOpen]);
   let s = ge[n]?.version;
+  const hasErrors = ge.some(
+    (item, index) => index < n && item.outcome === `error`,
+  );
   return b.createElement(
     `main`,
     {
       className: `main-content provider-detail-page`,
     },
-    b.createElement(_e, { current: `status` }),
+    b.createElement(_e, { current: `status`, showManage: false, onBack: e }),
     b.createElement(
       `section`,
       {
-        className: `status-alert ${i ? `cancelled` : o ? `complete` : ``}`,
+        className: `status-alert ${hasErrors ? `incomplete` : i ? `cancelled` : o ? `complete` : ``}`,
       },
-      i
+      hasErrors
+        ? b.createElement(w, { src: C.statusWarning })
+        : i
         ? b.createElement(`span`, {
             className: `status-cancelled-mark`,
             children: `×`,
@@ -1532,16 +1537,20 @@ function ve({ onCancel: e, onComplete: t }) {
         b.createElement(`strong`, {
           children: i
             ? `Provider publishing was canceled.`
-            : o
-              ? `Publishing complete. Opening versions...`
-              : `Publishing ${s}...`,
+            : hasErrors
+              ? `Some versions have incomplete ingress.`
+              : o
+                ? `Version ingress complete.`
+                : `Publishing ${s}...`,
         }),
         b.createElement(`p`, {
           children: i
             ? `Versions that finished processing are still available. The active and queued versions were not published.`
-            : o
-              ? `The processed versions are ready to review.`
-              : `A few versions still need to be published before this provider can be used....`,
+            : hasErrors
+              ? `Do you want to delete the provider from this organization? You can also keep it and review the versions.`
+              : o
+                ? `The processed versions are ready to review.`
+                : `A few versions still need to be published before this provider can be used.`,
         }),
         i
           ? b.createElement(T, {
@@ -1552,9 +1561,21 @@ function ve({ onCancel: e, onComplete: t }) {
           : !o &&
               b.createElement(T, {
                 className: `secondary`,
-                onClick: () => a(!0),
+                onClick: () => setDeleteOpen(true),
                 children: `Cancel`,
               }),
+        hasErrors &&
+          b.createElement(T, {
+            className: `secondary`,
+            onClick: () => setDeleteOpen(true),
+            children: `Delete provider from organization?`,
+          }),
+        o &&
+          b.createElement(T, {
+            className: `secondary`,
+            onClick: t,
+            children: `View provider`,
+          }),
       ),
     ),
     b.createElement(
@@ -1624,7 +1645,7 @@ function ve({ onCancel: e, onComplete: t }) {
                   ? r === `complete`
                     ? `Just published`
                     : r === `error`
-                      ? `Publishing failed`
+                      ? `Errored`
                       : r === `cancelled`
                         ? `Publishing canceled`
                         : r === `not-published`
@@ -1649,7 +1670,7 @@ function ve({ onCancel: e, onComplete: t }) {
                   className: `queue-error`,
                 },
                 b.createElement(w, { src: C.statusWarning }),
-                `VCS Publishing Error`,
+                `Version ingress incomplete`,
               ),
           );
         }),
@@ -1666,6 +1687,11 @@ function ve({ onCancel: e, onComplete: t }) {
         b.createElement(`button`, { type: `button`, children: `Next ›` }),
       ),
     ),
+    deleteOpen &&
+      b.createElement(ConfirmProviderDeletion, {
+        onClose: () => setDeleteOpen(false),
+        onConfirm: onDeleteProvider,
+      }),
   );
 }
 var be = [
@@ -1731,7 +1757,7 @@ function xe() {
         b.createElement(`span`, { children: `10` }),
       ),
       b.createElement(`p`, {
-        children: `Manage the versions of this module.`,
+        children: `Manage the versions of this provider.`,
       }),
     ),
     b.createElement(
@@ -2002,6 +2028,7 @@ function Se() {
     [libraryTab, setLibraryTab] = b.useState(`modules`),
     [selectedProvider, setSelectedProvider] = b.useState(PROVIDERS[0]),
     [deleteKey, setDeleteKey] = b.useState(null),
+    [providers, setProviders] = b.useState(PROVIDERS),
     v = n === `private` ? i : o;
   function y(e) {
     (r(e), d(e), l(!1));
@@ -2019,6 +2046,16 @@ function Se() {
       h(`GPG key removed`),
       setDeleteKey(null),
       window.setTimeout(() => h(``), 2600));
+  }
+  function deleteProvider() {
+    setProviders((items) =>
+      items.filter((item) => item.name !== selectedProvider.name),
+    );
+    setLibraryTab(`providers`);
+    _(!1);
+    t(`library`);
+    h(`Provider deleted from organization`);
+    window.setTimeout(() => h(``), 2600);
   }
   return b.createElement(
     `div`,
@@ -2040,6 +2077,8 @@ function Se() {
       ? b.createElement(k, {
           onCancel: () => t(`library`),
           onPublished: (e) => {
+            setProviders(PROVIDERS);
+            setSelectedProvider(PROVIDERS[0]);
             (t(`library`), _(!0));
           },
         })
@@ -2062,6 +2101,7 @@ function Se() {
             },
             showPublishToast: g,
             libraryTab,
+            providers,
             onLibraryTabChange: setLibraryTab,
             onSelectProvider: (provider) => {
               setSelectedProvider(provider);
@@ -2072,6 +2112,7 @@ function Se() {
           ? b.createElement(ve, {
               onCancel: () => t(`library`),
               onComplete: () => t(`details`),
+              onDeleteProvider: deleteProvider,
             })
           : e === `details`
             ? b.createElement(ProviderDetails, {
@@ -2082,7 +2123,8 @@ function Se() {
                   r(`private`);
                   t(`gpg`);
                 },
-                signingKeys: i,
+                onDeleteProvider: deleteProvider,
+                Header: _e,
               })
             : e === `versions`
               ? b.createElement(xe, {})

@@ -59,9 +59,9 @@ function tabs(items, active, onSelect, label, className = "detail-tabs") {
   );
 }
 
-export function ProviderTable({ onSelectProvider }) {
+export function ProviderTable({ onSelectProvider, providers: items }) {
   const [search, setSearch] = React.useState("");
-  const providers = PROVIDERS.filter((provider) =>
+  const providers = items.filter((provider) =>
     `${provider.name} ${provider.description}`
       .toLowerCase()
       .includes(search.toLowerCase()),
@@ -150,7 +150,9 @@ export function ProviderTable({ onSelectProvider }) {
       h(
         "p",
         { className: "prototype-empty", role: "status" },
-        "No providers match your search.",
+        items.length
+          ? "No providers match your search."
+          : "No private providers yet. Publish a provider to get started.",
       ),
   );
 }
@@ -190,25 +192,42 @@ function CodeBlock({ value, label }) {
   return h(
     "section",
     { className: "prototype-code-block", "aria-label": label },
-    h(
-      "div",
-      { className: "prototype-code-header" },
-      h("span", null, "HCL"),
-      button(status ? "Copied" : "Copy", copy, "prototype-code-copy", {
-        "aria-label": `Copy ${label}`,
-      }),
-    ),
+    button(status ? "✓" : "⧉", copy, "prototype-code-copy", {
+      "aria-label": `Copy ${label}`,
+    }),
     h(
       "div",
       { className: "prototype-code-body" },
       h(
-        "div",
-        { className: "prototype-code-lines", "aria-hidden": true },
-        value
-          .split("\n")
-          .map((_, index) => h("span", { key: index }, index + 1)),
+        "pre",
+        { tabIndex: 0, "aria-label": label },
+        h(
+          "code",
+          null,
+          value
+            .split(
+              /("(?:[^"\\]|\\.)*"|\b(?:terraform|required_providers|provider|resource|data|config)\b|\b[a-z_]+(?=\s*=))/g,
+            )
+            .map((token, index) =>
+              h(
+                "span",
+                {
+                  key: index,
+                  className: token.startsWith('"')
+                    ? "code-string"
+                    : /^(terraform|required_providers|provider|resource|data|config)$/.test(
+                          token,
+                        )
+                      ? "code-keyword"
+                      : /^[a-z_]+$/.test(token)
+                        ? "code-property"
+                        : undefined,
+                },
+                token,
+              ),
+            ),
+        ),
       ),
-      h("pre", { tabIndex: 0, "aria-label": label }, h("code", null, value)),
     ),
     status &&
       h("p", { className: "prototype-code-message", role: "status" }, status),
@@ -219,28 +238,9 @@ function CodeBlock({ value, label }) {
 
 function Documentation({ provider, version }) {
   const [page, setPage] = React.useState("overview");
-  const pages = [
-    ["overview", "Overview"],
-    ["configuration", "Provider configuration"],
-    ["resource", "Resource: aurora_cluster"],
-    ["data", "Data source: aurora_cluster"],
-  ];
   return h(
     "div",
     { className: "documentation-layout" },
-    h(
-      "nav",
-      {
-        className: "documentation-nav",
-        "aria-label": "Provider documentation",
-      },
-      pages.map(([id, label]) =>
-        button(label, () => setPage(id), page === id ? "active" : "", {
-          key: id,
-          "aria-current": page === id ? "page" : undefined,
-        }),
-      ),
-    ),
     h(
       "article",
       { className: "documentation-article" },
@@ -265,7 +265,25 @@ function Documentation({ provider, version }) {
               value: usage(provider, version),
               label: "Provider installation example",
             }),
-            button("Configure the provider", () => setPage("configuration")),
+            button(
+              "Provider configuration",
+              () => setPage("configuration"),
+              "provider-name-link",
+            ),
+            h(
+              "p",
+              null,
+              button(
+                "Resource: aurora_cluster",
+                () => setPage("resource"),
+                "provider-name-link",
+              ),
+            ),
+            button(
+              "Data source: aurora_cluster",
+              () => setPage("data"),
+              "provider-name-link",
+            ),
           )
         : page === "configuration"
           ? h(
@@ -338,6 +356,12 @@ function Documentation({ provider, version }) {
                 ),
               ),
     ),
+    page !== "overview" &&
+      button(
+        "Documentation overview",
+        () => setPage("overview"),
+        "provider-name-link",
+      ),
   );
 }
 
@@ -346,38 +370,59 @@ export function ProviderDetails({
   onBack,
   onViewVersions,
   onManageKeys,
-  signingKeys,
+  onDeleteProvider,
+  Header,
 }) {
   const [tab, setTab] = React.useState("files");
   const [version, setVersion] = React.useState(provider.version);
   const [showWarning, setShowWarning] = React.useState(true);
+  const [usageTab, setUsageTab] = React.useState("workspaces");
+  const [manageOpen, setManageOpen] = React.useState(false);
+  const [actionsOpen, setActionsOpen] = React.useState(false);
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
   return h(
     "main",
     { className: "main-content provider-detail-page" },
+    h(Header, { current: version, onBack, showManage: false }),
     h(
       "div",
-      { className: "breadcrumbs" },
-      button("CoolCorp", onBack, ""),
-      h("span", null, "/"),
-      button("Private Library", onBack, ""),
-      h("span", null, "/"),
-      button("Providers", onBack, ""),
-      h("span", null, "/"),
-      h("span", null, provider.name),
+      { className: "provider-manage-menu" },
+      button(
+        `Manage ${manageOpen ? "⌃" : "⌄"}`,
+        () => setManageOpen(!manageOpen),
+        "action-button secondary",
+        { "aria-expanded": manageOpen, "aria-haspopup": "menu" },
+      ),
+      manageOpen &&
+        h(
+          "div",
+          { className: "provider-menu", role: "menu" },
+          button("Manage GPG Key", onManageKeys, "", { role: "menuitem" }),
+          button(
+            "Delete provider",
+            () => {
+              setManageOpen(false);
+              setDeleteOpen(true);
+            },
+            "danger",
+            { role: "menuitem" },
+          ),
+        ),
     ),
-    h("h1", { className: "prototype-provider-title" }, provider.name),
     h(
       "div",
       { className: "provider-metadata" },
       h("span", null, `By ${provider.namespace}`),
       h("span", null, `Version ${version}`),
-      h("span", null, "Private provider"),
-      h("span", null, "GitHub Releases"),
+      h("span", null, "◷ Published just now"),
+      h("span", null, "⇩ Provisions ~600"),
+      h("span", null, "◇ Tags 5"),
     ),
     showWarning &&
       h(
         "section",
         { className: "provider-warning-alert" },
+        h("span", { className: "warning-mark", "aria-hidden": true }, "△"),
         h(
           "div",
           null,
@@ -389,7 +434,7 @@ export function ProviderDetails({
           h(
             "p",
             null,
-            "Provider versions 0.14.1 and 0.15.1 failed to publish.",
+            "Provider versions 0.14.1 and 0.15.1 have incomplete version ingress.",
           ),
           button("See all versions", onViewVersions),
         ),
@@ -407,26 +452,50 @@ export function ProviderDetails({
         { className: "version-select-field" },
         h("span", null, "Select version"),
         h(
-          "select",
-          {
-            value: version,
-            onChange: (event) => setVersion(event.target.value),
-          },
-          provider.versions.map((value) =>
-            h(
-              "option",
-              { key: value, value },
-              value === provider.version ? `${value} (latest)` : value,
+          "span",
+          { className: "version-select-row" },
+          h(
+            "select",
+            {
+              "aria-label": "Select version",
+              value: version,
+              onChange: (event) => setVersion(event.target.value),
+            },
+            provider.versions.map((value) =>
+              h(
+                "option",
+                { key: value, value },
+                value === provider.version ? `${value} (latest)` : value,
+              ),
             ),
+          ),
+          h(
+            "span",
+            { className: "provider-actions-menu" },
+            button(
+              "Actions ⌄",
+              () => setActionsOpen(!actionsOpen),
+              "action-button primary",
+              { "aria-expanded": actionsOpen, "aria-haspopup": "menu" },
+            ),
+            actionsOpen &&
+              h(
+                "span",
+                { className: "provider-menu", role: "menu" },
+                button("View all versions", onViewVersions, "", {
+                  role: "menuitem",
+                }),
+              ),
           ),
         ),
       ),
       h(
         "dl",
         { className: "provider-stats" },
+        stat("Environment tags", "10 assigned"),
         stat("Version downloads", provider.downloads),
         stat(
-          "Repository",
+          "Source",
           h(
             "a",
             {
@@ -437,15 +506,7 @@ export function ProviderDetails({
             provider.repository,
           ),
         ),
-        stat("Publishing method", "GitHub Releases"),
-        stat(
-          "Signing keys",
-          button(
-            `${signingKeys.length} organization key${signingKeys.length === 1 ? "" : "s"} · Manage GPG keys`,
-            onManageKeys,
-            "provider-name-link",
-          ),
-        ),
+        stat("Published", "just now"),
       ),
       h(
         "div",
@@ -475,28 +536,11 @@ export function ProviderDetails({
                   React.Fragment,
                   null,
                   h("h3", null, "Release Files"),
-                  h("p", { className: "upload-success" }, "Uploaded (4)"),
-                  h(
-                    "ul",
-                    { className: "release-file-list" },
-                    [
-                      "darwin_arm64.zip",
-                      "linux_amd64.zip",
-                      "SHA256SUMS",
-                      "SHA256SUMS.sig",
-                    ].map((file) =>
-                      h(
-                        "li",
-                        { key: file },
-                        `terraform-provider-${provider.name}_${version}_${file}`,
-                      ),
-                    ),
-                  ),
-                  h(
-                    "p",
-                    { className: "prototype-note" },
-                    "Sample release assets for this prototype.",
-                  ),
+                  h("p", { className: "upload-success" }, "✓ Uploaded (0)"),
+                  h("small", null, "No files uploaded"),
+                  h("p", { className: "upload-warning" }, "▲ Missing (2)"),
+                  h("small", null, "SHA256SUMS"),
+                  h("small", null, "SHA256SUMS.sig"),
                 ),
           ),
         ),
@@ -504,17 +548,61 @@ export function ProviderDetails({
           "aside",
           { className: "usage-card" },
           h("h3", null, `Usage Instructions (${version})`),
+          tabs(
+            [
+              ["workspaces", "Workspaces"],
+              ["stacks", "Stacks"],
+            ],
+            usageTab,
+            setUsageTab,
+            "provider-usage",
+          ),
           h(
             "p",
             null,
             "Copy this snippet to your Terraform configuration, then run terraform init.",
           ),
           h(CodeBlock, {
-            value: usage(provider, version),
+            value:
+              usageTab === "workspaces"
+                ? usage(provider, version)
+                : `provider "aurora" "this" {\n  source = "app.terraform.io/${provider.namespace}/${provider.name}"\n  version = "${version}"\n  config {\n    region = "us-east-1"\n  }\n}`,
             label: "Provider usage instructions",
           }),
         ),
       ),
+    ),
+    deleteOpen &&
+      h(ConfirmProviderDeletion, {
+        onClose: () => setDeleteOpen(false),
+        onConfirm: onDeleteProvider,
+      }),
+  );
+}
+
+export function ConfirmProviderDeletion({ onClose, onConfirm }) {
+  return h(
+    Modal,
+    { title: "Delete provider from organization?", onClose },
+    h(
+      "div",
+      { className: "modal-body" },
+      h(
+        "p",
+        null,
+        "This removes the provider and all of its versions from CoolCorp's private library. Configurations that depend on it may no longer be able to install it.",
+      ),
+      h(
+        "p",
+        null,
+        "Organization GPG keys will not be deleted. This prototype only changes the mock provider list.",
+      ),
+    ),
+    h(
+      "div",
+      { className: "modal-footer" },
+      button("Delete provider", onConfirm, "action-button danger"),
+      button("Keep provider", onClose),
     ),
   );
 }
@@ -572,10 +660,6 @@ function Modal({ title, onClose, children, onSubmit }) {
     ),
   );
 }
-
-export const SAMPLE_PUBLIC_KEY = `-----BEGIN PGP PUBLIC KEY BLOCK-----
-Prototype-only sample. Not a cryptographic key.
------END PGP PUBLIC KEY BLOCK-----`;
 
 export function validateKey(
   { title, key, sourceURL, namespace },
@@ -635,7 +719,7 @@ export function KeyDialog({ scope, onClose, onSubmit, existingKeys }) {
   return h(
     Modal,
     {
-      title: `Add new GPG key · ${scope === "private" ? "Private" : "Public Namespace"}`,
+      title: "Add new GPG key",
       onClose,
       onSubmit: submit,
     },
@@ -645,7 +729,7 @@ export function KeyDialog({ scope, onClose, onSubmit, existingKeys }) {
       h(
         "p",
         { className: "prototype-note" },
-        "Prototype only: enter any mock key text, not real keys. Title and Public key are required. No key format validation, cryptographic verification, or upload takes place. IDs are simulated.",
+        "Use any mock text, not real keys. Required fields: Title and Public key.",
       ),
       scope === "public" &&
         field(
@@ -680,10 +764,6 @@ export function KeyDialog({ scope, onClose, onSubmit, existingKeys }) {
           "aria-invalid": Boolean(error),
         }),
       ),
-      button("Use sample public key", () => {
-        setKey(SAMPLE_PUBLIC_KEY);
-        setTitle(title || "Provider release signing");
-      }),
       field(
         "Source (e.g. Keybase)",
         h("input", {
@@ -760,9 +840,14 @@ export function KeyCard({ item, onDelete }) {
         ),
       ),
     ),
-    button("Delete", onDelete, "delete-button", {
-      "aria-label": `Delete GPG key ${item.keyId}`,
-    }),
+    button(
+      h("img", { src: "./assets/b86ca.svg", alt: "" }),
+      onDelete,
+      "delete-button",
+      {
+        "aria-label": `Delete GPG key ${item.keyId}`,
+      },
+    ),
   );
 }
 
