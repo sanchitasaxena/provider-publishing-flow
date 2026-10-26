@@ -101,6 +101,92 @@
 .provider-name-link:hover {
   text-decoration: underline;
 }
+.provider-brand-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.provider-name-link,
+.version-status,
+.version-expand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.inline-icon {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.combined-versions .versions-heading {
+  margin-top: 32px;
+}
+.combined-versions .versions-table-wrap {
+  overflow-x: auto;
+}
+.combined-versions .versions-table {
+  min-width: 680px;
+}
+.combined-versions .version-status {
+  white-space: nowrap;
+}
+.version-status img,
+.version-expand img {
+  width: 16px;
+  height: 16px;
+}
+.version-chevron {
+  flex-shrink: 0;
+  color: var(--color-foreground-muted);
+  transform: rotate(90deg);
+}
+.version-expand[aria-expanded="true"] .version-chevron {
+  transform: rotate(-90deg);
+}
+.version-commit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: 1px solid var(--color-border-faint);
+  border-radius: var(--radius-control);
+  white-space: nowrap;
+}
+.version-commit img {
+  width: 16px;
+  height: 16px;
+}
+.version-commit code {
+  padding: 0;
+  background: none;
+  color: var(--color-foreground-muted);
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 13px;
+}
+.version-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.version-filter select {
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--color-border-faint);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  color: inherit;
+  font: inherit;
+}
+.combined-versions .version-error-row td {
+  background: var(--color-bg);
+  color: var(--color-foreground-muted);
+}
+.version-error-row a {
+  color: var(--color-brand);
+  text-decoration: underline;
+}
 .provider-lower-grid > * {
   min-width: 0;
 }

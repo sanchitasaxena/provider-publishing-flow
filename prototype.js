@@ -5,9 +5,11 @@ import {
   KeyDialog,
   KeyCard,
   ConfirmKeyDeletion,
-  ConfirmProviderDeletion,
+  ConfirmPublishingCancellation,
   PROVIDERS,
-} from "./workflows.js?v=figma-frames-1";
+  ProviderIcon,
+  PublishedTime,
+} from "./workflows.js?v=version-details-2";
 var C = {
     arrowRight: `./assets/816b2.svg`,
     aws: `./assets/6aa6a.svg`,
@@ -179,13 +181,7 @@ function ne({
             className: `nav-title provider-nav-title`,
             children: providerName,
           }),
-          e === `status`
-            ? b.createElement(`button`, {
-                className: `nav-item active`,
-                type: `button`,
-                children: `Status`,
-              })
-            : b.createElement(
+          b.createElement(
                 b.Fragment,
                 {},
                 b.createElement(`button`, {
@@ -195,7 +191,7 @@ function ne({
                   children: `Overview`,
                 }),
                 b.createElement(`button`, {
-                  className: `nav-item ${e === `versions` ? `active` : ``}`,
+                  className: `nav-item ${e === `versions` || e === `status` ? `active` : ``}`,
                   onClick: () => n(`versions`),
                   type: `button`,
                   children: `Versions`,
@@ -620,7 +616,7 @@ function fe({
         },
         b.createElement(`h2`, { children: `Configure VCS Repository` }),
         b.createElement(`p`, {
-          children: `Select the repository for your provider’s release assets. Check if all required files are present to publish a version successfully .`,
+          children: `Select the repository for your provider’s release assets. Check if all required files are present to publish a version successfully.`,
         }),
       ),
       b.createElement(
@@ -744,7 +740,9 @@ function fe({
           `Update the repository to include all necessary files to publish a version of the provider, including documentation. Learn more about`,
           ` `,
           b.createElement(`a`, {
-            href: `#required-files`,
+            href: `https://developer.hashicorp.com/terraform/cloud-docs/registry/publish-providers`,
+            target: `_blank`,
+            rel: `noreferrer`,
             children: `what files are required`,
           }),
           ` for a provider’s release assets.`,
@@ -1353,18 +1351,18 @@ function he({
             className: `secondary toast-action`,
             onClick: o,
           },
-          `View status`,
+          `View versions`,
           b.createElement(w, { src: C.arrowRight }),
         ),
       ),
   );
 }
 var ge = [
-  { version: `v0.12.0`, commit: `53xc67b`, status: `complete` },
-  { version: `v0.13.0`, commit: `89kec67`, status: `complete` },
+  { version: `v0.12.0`, commit: `53ac67b`, status: `complete` },
+  { version: `v0.13.0`, commit: `89aec67`, status: `complete` },
   {
     version: `v0.14.0`,
-    commit: `m68c67d`,
+    commit: `a68c67d`,
     status: `pending`,
     outcome: `complete`,
   },
@@ -1400,13 +1398,13 @@ var ge = [
   },
   {
     version: `v0.17.0`,
-    commit: `a2b4c6d8`,
+    commit: `a2b4c6d`,
     status: `pending`,
     outcome: `complete`,
   },
   {
     version: `v0.17.1`,
-    commit: `f1e3d5b7`,
+    commit: `f1e3d5b`,
     status: `pending`,
     outcome: `complete`,
   },
@@ -1453,7 +1451,7 @@ function _e({ current: e, showManage = true, onBack }) {
       },
       b.createElement(`div`, {
         className: `provider-logo`,
-        children: b.createElement(w, { src: C.aws, alt: `AWS` }),
+        children: b.createElement(ProviderIcon),
       }),
       b.createElement(
         `div`,
@@ -1485,44 +1483,47 @@ function _e({ current: e, showManage = true, onBack }) {
     ),
   );
 }
-function ve({ onCancel: e, onComplete: t, onDeleteProvider }) {
-  let [n, r] = (0, b.useState)(ge.findIndex((e) => e.status === `pending`)),
-    [i, a] = (0, b.useState)(!1),
-    [deleteOpen, setDeleteOpen] = b.useState(false),
-    o = n >= ge.length;
-  (0, b.useEffect)(() => {
-    if (i || o || deleteOpen) return;
-    let e = window.setTimeout(
-      () => {
-        r((e) => e + 1);
-      },
-      o ? 1400 : 1800,
-    );
-    return () => window.clearTimeout(e);
-  }, [n, i, o, deleteOpen]);
+function versionRows(progress, cancelled = false) {
+  return ge.map((item, index) => ({
+    ...item,
+    status: item.status === `complete` || index < progress
+      ? item.outcome || `complete`
+      : cancelled ? `cancelled` : index === progress ? `pending` : `queued`,
+  }));
+}
+function ve({
+  onCancel: e,
+  onComplete: t,
+  onCancelPublishing,
+  progress: n,
+  paused: cancelOpen,
+  onPause: setCancelOpen,
+  cancelled,
+  publishedTimes,
+}) {
+  const o = n >= ge.length || cancelled;
+  const rows = versionRows(n, cancelled);
   let s = ge[n]?.version;
-  const hasErrors = ge.some(
-    (item, index) => index < n && item.outcome === `error`,
-  );
+  const completed = rows.filter((item) => item.status === `complete`).length;
+  const errors = rows.filter((item) => item.status === `error`).length;
+  const hasErrors = errors > 0;
   return b.createElement(
     `main`,
     {
       className: `main-content provider-detail-page`,
     },
-    b.createElement(_e, { current: `status`, showManage: false, onBack: e }),
+    b.createElement(_e, { current: `Versions`, showManage: false, onBack: e }),
     b.createElement(
       `section`,
       {
-        className: `status-alert ${hasErrors ? `incomplete` : i ? `cancelled` : o ? `complete` : ``}`,
+        className: `status-alert ${cancelled ? `cancelled` : hasErrors ? `incomplete` : o ? `complete` : ``}`,
+        role: `status`,
       },
-      hasErrors
+      cancelled
+        ? b.createElement(`span`, { className: `status-cancelled-mark`, children: `×` })
+        : hasErrors
         ? b.createElement(w, { src: C.statusWarning })
-        : i
-          ? b.createElement(`span`, {
-              className: `status-cancelled-mark`,
-              children: `×`,
-            })
-          : o
+        : o
             ? b.createElement(`span`, {
                 className: `status-complete-mark`,
                 children: `✓`,
@@ -1535,34 +1536,30 @@ function ve({ onCancel: e, onComplete: t, onDeleteProvider }) {
         `div`,
         {},
         b.createElement(`strong`, {
-          children: i
+          children: cancelled
             ? `Provider publishing was canceled.`
+            : !o
+            ? `Publishing ${s}...`
             : hasErrors
-              ? `Some versions have incomplete ingress.`
-              : o
-                ? `Version ingress complete.`
-                : `Publishing ${s}...`,
+              ? `Version ingress finished with errors.`
+              : `Version ingress complete.`,
         }),
         b.createElement(`p`, {
-          children: i
-            ? `Versions that finished processing are still available. The active and queued versions were not published.`
-            : hasErrors
-              ? `Do you want to delete the provider from this organization? You can also keep it and review the versions.`
+          children: `${completed} published, ${errors} incomplete, ${ge.length - completed - errors} ${cancelled ? `canceled` : `remaining`}. ${
+            cancelled
+              ? `Active and queued versions were not published. Previously published versions remain available.`
               : o
-                ? `The processed versions are ready to review.`
-                : `A few versions still need to be published before this provider can be used.`,
+              ? hasErrors
+                ? `Published versions are available. Expand incomplete versions below to review errors.`
+                : `All versions are ready to use.`
+              : `This list updates as each version is processed. You can leave this page and return without losing progress.`
+          }`,
         }),
-        i
-          ? b.createElement(T, {
-              className: `secondary`,
-              onClick: e,
-              children: `Return to private library`,
-            })
-          : (!o || hasErrors) &&
+        !o &&
               b.createElement(T, {
                 className: `secondary`,
-                onClick: () => setDeleteOpen(true),
-                children: `Delete provider from organization`,
+                onClick: () => setCancelOpen(true),
+                children: `Cancel publishing`,
               }),
         o &&
           b.createElement(T, {
@@ -1572,173 +1569,35 @@ function ve({ onCancel: e, onComplete: t, onDeleteProvider }) {
           }),
       ),
     ),
-    b.createElement(
-      `section`,
-      {
-        className: `queue-section`,
-      },
-      b.createElement(`div`, {
-        className: `queue-heading`,
-        children: b.createElement(`h2`, { children: `Version Queue` }),
-      }),
-      b.createElement(`div`, {
-        className: `queue-list`,
-        children: ge.map((e, t) => {
-          let r =
-            e.status === `pending`
-              ? i && t === n
-                ? `cancelled`
-                : i && t > n
-                  ? `not-published`
-                  : t < n
-                    ? e.outcome || `complete`
-                    : t === n
-                      ? `pending`
-                      : `queued`
-              : e.status;
-          return b.createElement(
-            `button`,
-            {
-              className: `queue-item ${r}`,
-              type: `button`,
-              key: e.version,
-            },
-            b.createElement(`span`, {
-              className: `queue-status-icon`,
-              children:
-                r === `complete`
-                  ? b.createElement(w, { src: C.statusCheck })
-                  : r === `error`
-                    ? b.createElement(w, { src: C.statusError })
-                    : r === `queued`
-                      ? b.createElement(`span`, {
-                          className: `queued-dot`,
-                        })
-                      : r === `cancelled`
-                        ? b.createElement(`span`, {
-                            className: `cancelled-dot`,
-                            children: `×`,
-                          })
-                        : r === `not-published`
-                          ? b.createElement(`span`, {
-                              className: `not-published-dot`,
-                              children: `–`,
-                            })
-                          : b.createElement(`span`, {
-                              className: `loading-icon`,
-                              children: b.createElement(w, {
-                                src: C.loading,
-                              }),
-                            }),
-            }),
-            b.createElement(`strong`, { children: e.version }),
-            b.createElement(`span`, {
-              className: `queue-age`,
-              children:
-                e.status === `pending`
-                  ? r === `complete`
-                    ? `Just published`
-                    : r === `error`
-                      ? `Errored`
-                      : r === `cancelled`
-                        ? `Publishing canceled`
-                        : r === `not-published`
-                          ? `Not published`
-                          : r === `pending`
-                            ? `Publishing now`
-                            : `Queued`
-                  : `2 hours ago`,
-            }),
-            b.createElement(
-              `span`,
-              {
-                className: `queue-commit`,
-              },
-              b.createElement(w, { src: C.gitCommit }),
-              e.commit,
-            ),
-            r === `error` &&
-              b.createElement(
-                `span`,
-                {
-                  className: `queue-error`,
-                },
-                b.createElement(w, { src: C.statusWarning }),
-                `Version ingress incomplete`,
-              ),
-          );
-        }),
-      }),
-      b.createElement(
-        `div`,
-        {
-          className: `queue-pagination`,
-        },
-        b.createElement(`button`, {
-          type: `button`,
-          children: `‹ Previous`,
-        }),
-        b.createElement(`button`, { type: `button`, children: `Next ›` }),
-      ),
-    ),
-    deleteOpen &&
-      b.createElement(ConfirmProviderDeletion, {
-        onClose: () => setDeleteOpen(false),
-        onConfirm: onDeleteProvider,
+    b.createElement(xe, { rows, publishedTimes }),
+    cancelOpen &&
+      b.createElement(ConfirmPublishingCancellation, {
+        onClose: () => setCancelOpen(false),
+        onConfirm: onCancelPublishing,
       }),
   );
 }
-var be = [
-  { version: `v0.12.0`, status: `Ok` },
-  { version: `v0.13.0`, status: `Ok` },
-  { version: `v0.14.0`, status: `Ok` },
-  { version: `v0.14.1`, status: `Error`, error: `Error: VCS Publishing error` },
-  { version: `v0.15.0`, status: `Ok` },
-  { version: `v0.15.1`, status: `Error`, error: `Error: VCS Publishing error` },
-  { version: `v0.16.0`, status: `Ok` },
-  { version: `v0.16.1`, status: `Ok` },
-  { version: `v0.17.0`, status: `Ok` },
-  { version: `v0.17.1`, status: `Ok` },
-];
-function xe() {
-  let [e, t] = (0, b.useState)(`v0.14.1`);
+function xe({ rows, publishedTimes }) {
+  const [expanded, setExpanded] = b.useState([]);
+  const [search, setSearch] = b.useState(``);
+  const [filter, setFilter] = b.useState(`all`);
+  const labels = {
+    complete: `Published`,
+    error: `Ingress incomplete`,
+    pending: `Publishing`,
+    queued: `Queued`,
+    cancelled: `Canceled`,
+  };
+  const visibleRows = rows.filter((row) =>
+    row.version.toLowerCase().includes(search.toLowerCase()) &&
+    (filter === `all` || row.status === filter),
+  );
   return b.createElement(
-    `main`,
+    `section`,
     {
-      className: `main-content versions-page`,
+      className: `combined-versions`,
+      "aria-label": `Provider versions`,
     },
-    b.createElement(
-      `div`,
-      {
-        className: `breadcrumbs`,
-      },
-      b.createElement(`button`, {
-        type: `button`,
-        children: `Organization`,
-      }),
-      b.createElement(`span`, { children: `/` }),
-      b.createElement(`button`, { type: `button`, children: `Registry` }),
-      b.createElement(`span`, { children: `/` }),
-      b.createElement(`button`, {
-        type: `button`,
-        children: `Private Library`,
-      }),
-      b.createElement(`span`, { children: `/` }),
-      b.createElement(`button`, { type: `button`, children: `provider` }),
-      b.createElement(`span`, { children: `/` }),
-      b.createElement(`button`, {
-        type: `button`,
-        children: `aws_rds_aurora`,
-      }),
-      b.createElement(`span`, { children: `/` }),
-      b.createElement(`button`, {
-        className: `current`,
-        type: `button`,
-        children: `Versions`,
-      }),
-    ),
-    b.createElement(`h1`, { children: `Versions` }),
-    b.createElement(`code`, { children: `provider: aws_rds_aurora` }),
     b.createElement(
       `div`,
       {
@@ -1748,10 +1607,10 @@ function xe() {
         `h2`,
         {},
         `Versions `,
-        b.createElement(`span`, { children: `10` }),
+        b.createElement(`span`, { children: rows.length }),
       ),
       b.createElement(`p`, {
-        children: `Manage the versions of this provider.`,
+        children: `Track publishing progress and review all provider versions in one place.`,
       }),
     ),
     b.createElement(
@@ -1764,20 +1623,22 @@ function xe() {
         {
           className: `library-toolbar`,
         },
-        b.createElement(`button`, {
-          className: `small-icon-button`,
-          type: `button`,
-          children: `↕`,
-        }),
         b.createElement(
-          `button`,
+          `label`,
           {
-            className: `filter-button`,
-            type: `button`,
+            className: `version-filter`,
           },
-          b.createElement(w, { src: C.filter }),
-          `Filters`,
-          b.createElement(w, { src: C.caretDown }),
+          `Status`,
+          b.createElement(`select`, {
+            value: filter,
+            onChange: (event) => setFilter(event.target.value),
+            children: [
+              [`all`, `All statuses`],
+              ...Object.entries(labels),
+            ].map(([value, label]) =>
+              b.createElement(`option`, { value, key: value }, label),
+            ),
+          }),
         ),
         b.createElement(
           `label`,
@@ -1785,7 +1646,12 @@ function xe() {
             className: `library-search`,
           },
           b.createElement(w, { src: C.search }),
-          b.createElement(`input`, { placeholder: `Search` }),
+          b.createElement(`input`, {
+            "aria-label": `Search versions`,
+            placeholder: `Search versions`,
+            value: search,
+            onChange: (event) => setSearch(event.target.value),
+          }),
         ),
       ),
       b.createElement(`div`, {
@@ -1802,13 +1668,15 @@ function xe() {
               b.createElement(`th`, { children: `Version` }),
               b.createElement(`th`, { children: `Status` }),
               b.createElement(`th`, { children: `Published` }),
-              b.createElement(`th`, { children: `Environment tags` }),
-              b.createElement(`th`, { children: `Downloads` }),
-              b.createElement(`th`, { children: `Actions` }),
+              b.createElement(`th`, { children: `Commit` }),
+              b.createElement(`th`, {
+                title: `Downloads from this organization's private registry, not global or GitHub release downloads.`,
+                children: `Downloads`,
+              }),
             ),
           }),
           b.createElement(`tbody`, {
-            children: be.map((n) =>
+            children: visibleRows.map((n) =>
               b.createElement(
                 b.Fragment,
                 {
@@ -1818,54 +1686,110 @@ function xe() {
                   `tr`,
                   {},
                   b.createElement(`td`, {
-                    children: b.createElement(
+                    children: n.status === `error` ? b.createElement(
                       `button`,
                       {
                         className: `version-expand`,
-                        onClick: () => t(e === n.version ? `` : n.version),
+                        "aria-expanded": expanded.includes(n.version),
+                        "aria-controls": `error-${n.version}`,
+                        onClick: () => setExpanded((items) =>
+                          items.includes(n.version)
+                            ? items.filter((item) => item !== n.version)
+                            : [...items, n.version],
+                        ),
                         type: `button`,
                       },
-                      n.error ? (e === n.version ? `⌃` : `⌄`) : ``,
+                      b.createElement(
+                        `svg`,
+                        {
+                          className: `version-chevron`,
+                          width: 16,
+                          height: 16,
+                          viewBox: `0 0 16 16`,
+                          fill: `none`,
+                          "aria-hidden": true,
+                        },
+                        b.createElement(`path`, {
+                          d: `m6 3 5 5-5 5`,
+                          stroke: `currentColor`,
+                          strokeWidth: 1.5,
+                          strokeLinecap: `round`,
+                          strokeLinejoin: `round`,
+                        }),
+                      ),
                       b.createElement(`strong`, {
                         children: n.version,
                       }),
-                    ),
+                    ) : b.createElement(`strong`, null, n.version),
                   }),
                   b.createElement(`td`, {
                     children: b.createElement(
                       `span`,
                       {
-                        className: `version-status ${n.status.toLowerCase()}`,
+                        className: `version-status ${n.status}`,
                       },
-                      n.status === `Ok` ? `✓` : `△`,
-                      ` `,
-                      n.status,
+                      n.status === `queued` || n.status === `cancelled`
+                        ? b.createElement(`span`, {
+                            className: n.status === `queued` ? `queued-dot` : `cancelled-dot`,
+                            children: n.status === `cancelled` ? `×` : null,
+                          })
+                        : b.createElement(`span`, {
+                            className: n.status === `pending` ? `loading-icon` : ``,
+                            children: b.createElement(w, {
+                              src: n.status === `complete` ? C.statusCheck
+                                : n.status === `error` ? C.statusError : C.loading,
+                            }),
+                          }),
+                      labels[n.status],
                     ),
                   }),
                   b.createElement(`td`, {
-                    children: `March 28, 2026`,
+                    children: n.status === `complete`
+                      ? b.createElement(PublishedTime, { timestamp: publishedTimes[n.version.slice(1)] })
+                      : `Not published`,
+                  }),
+                  b.createElement(`td`, {
+                    children: b.createElement(
+                      `span`,
+                      {
+                        className: `version-commit`,
+                        title: `Illustrative commit ${n.commit}`,
+                      },
+                      b.createElement(w, { src: C.gitCommit }),
+                      b.createElement(`code`, null, n.commit),
+                    ),
                   }),
                   b.createElement(`td`, {}),
-                  b.createElement(`td`, { children: `⇩ 12` }),
-                  b.createElement(`td`, {
-                    children: b.createElement(`button`, {
-                      className: `row-menu`,
-                      type: `button`,
-                      children: `…`,
-                    }),
-                  }),
                 ),
-                n.error &&
-                  e === n.version &&
+                n.status === `error` &&
+                  expanded.includes(n.version) &&
                   b.createElement(`tr`, {
                     className: `version-error-row`,
+                    id: `error-${n.version}`,
                     children: b.createElement(`td`, {
-                      colSpan: 6,
-                      children: n.error,
+                      colSpan: 5,
+                      children: b.createElement(
+                        `div`,
+                        {},
+                        b.createElement(`strong`, null, `Version ingress incomplete: VCS publishing error.`),
+                        b.createElement(`p`, null, `Check this release's required files and signing key, then publish a corrected release. Error details are illustrative in this prototype.`),
+                        b.createElement(`a`, {
+                          href: `https://developer.hashicorp.com/terraform/cloud-docs/registry/publish-providers`,
+                          target: `_blank`,
+                          rel: `noreferrer`,
+                          children: `Review required release files`,
+                        }),
+                      ),
                     }),
                   }),
               ),
-            ),
+            ).concat(visibleRows.length ? [] : [
+                b.createElement(`tr`, { key: `empty` },
+                  b.createElement(`td`, { colSpan: 5, className: `prototype-empty` },
+                    `No versions match your search and status filter.`,
+                  ),
+                ),
+            ]),
           }),
         ),
       }),
@@ -2023,7 +1947,40 @@ function Se() {
     [selectedProvider, setSelectedProvider] = b.useState(PROVIDERS[0]),
     [deleteKey, setDeleteKey] = b.useState(null),
     [providers, setProviders] = b.useState(PROVIDERS),
+    [ingressProgress, setIngressProgress] = b.useState(ge.length),
+    [ingressPaused, setIngressPaused] = b.useState(false),
+    [ingressCancelled, setIngressCancelled] = b.useState(false),
+    [publishedTimes, setPublishedTimes] = b.useState(() =>
+      Object.fromEntries(ge.map((item, index) => [
+        item.version.slice(1), Date.now() - (ge.length - index) * 3600000,
+      ])),
+    ),
     v = n === `private` ? i : o;
+  b.useEffect(() => {
+    if (ingressPaused || ingressCancelled || ingressProgress >= ge.length) return;
+    const timer = window.setTimeout(() => {
+      setPublishedTimes((times) => ({
+        ...times,
+        [ge[ingressProgress].version.slice(1)]: Date.now(),
+      }));
+      setIngressProgress((progress) => progress + 1);
+    }, 1800);
+    return () => window.clearTimeout(timer);
+  }, [ingressProgress, ingressPaused, ingressCancelled]);
+  const ingressRows = versionRows(ingressProgress, ingressCancelled);
+  const publishedVersions = ingressRows
+    .filter((item) => item.status === `complete`)
+    .map((item) => item.version.slice(1))
+    .reverse();
+  const providerVersions = {
+    version: publishedVersions[0],
+    versions: publishedVersions,
+    publishedAt: publishedTimes[publishedVersions[0]],
+    publishedTimes,
+  };
+  const failedVersions = ingressRows
+    .filter((item) => item.status === `error`)
+    .map((item) => item.version.slice(1));
   function y(e) {
     (r(e), d(e), l(!1));
   }
@@ -2046,6 +2003,9 @@ function Se() {
       items.filter((item) => item.name !== selectedProvider.name),
     );
     setLibraryTab(`providers`);
+    setIngressProgress(ge.length);
+    setIngressPaused(false);
+    setIngressCancelled(false);
     _(!1);
     t(`library`);
     h(`Provider deleted from organization`);
@@ -2073,7 +2033,11 @@ function Se() {
           onPublished: (e) => {
             setProviders(PROVIDERS);
             setSelectedProvider(PROVIDERS[0]);
-            (t(`library`), _(!0));
+            setIngressProgress(ge.findIndex((item) => item.status === `pending`));
+            setIngressPaused(false);
+            setIngressCancelled(false);
+            setLibraryTab(`providers`);
+            (t(`versions`), _(!1));
           },
         })
       : e === `library`
@@ -2091,26 +2055,34 @@ function Se() {
                 window.setTimeout(() => h(``), 2600));
             },
             onViewStatus: () => {
-              (_(!1), t(`status`));
+              (_(!1), t(`versions`));
             },
             showPublishToast: g,
             libraryTab,
-            providers,
+            providers: providers.map((provider) => ({ ...provider, ...providerVersions })),
             onLibraryTabChange: setLibraryTab,
             onSelectProvider: (provider) => {
               setSelectedProvider(provider);
               t(`details`);
             },
           })
-        : e === `status`
+        : e === `status` || e === `versions`
           ? b.createElement(ve, {
               onCancel: () => t(`library`),
               onComplete: () => t(`details`),
-              onDeleteProvider: deleteProvider,
+              onCancelPublishing: () => {
+                setIngressCancelled(true);
+                setIngressPaused(false);
+              },
+              cancelled: ingressCancelled,
+              progress: ingressProgress,
+              paused: ingressPaused,
+              onPause: setIngressPaused,
+              publishedTimes,
             })
           : e === `details`
             ? b.createElement(ProviderDetails, {
-                provider: selectedProvider,
+                provider: { ...selectedProvider, ...providerVersions },
                 onBack: () => t(`library`),
                 onViewVersions: () => t(`versions`),
                 onManageKeys: () => {
@@ -2118,11 +2090,11 @@ function Se() {
                   t(`gpg`);
                 },
                 onDeleteProvider: deleteProvider,
+                ingressComplete: ingressProgress >= ge.length || ingressCancelled,
+                failedVersions,
                 Header: _e,
               })
-            : e === `versions`
-              ? b.createElement(xe, {})
-              : b.createElement(
+            : b.createElement(
                   `main`,
                   {
                     className: `main-content`,

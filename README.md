@@ -12,7 +12,32 @@ No build step or backend is required.
    and the data source. Switching the provider version updates the documentation
    context and usage snippet.
 4. Return to the library using the breadcrumb or sidebar. The Providers tab stays
-   selected. The existing Versions and publishing-status views remain available.
+   selected. Versions combines publishing status and version history in one view.
+
+## Publishing and versions
+
+- Repository helper text links to HashiCorp's
+  [provider publishing requirements](https://developer.hashicorp.com/terraform/cloud-docs/registry/publish-providers).
+- Publishing opens **Versions** directly. The status summary and version rows
+  update in place through Queued, Publishing, Published, and Ingress incomplete.
+- Search by version or filter by status. Expand incomplete versions to review
+  illustrative errors and access the release-file requirements. Error rows have
+  a contrasting accordion chevron that points down when closed and up when open.
+- The combined table retains commit references from the original status queue
+  (the original Versions table did not include them). Illustrative commits use
+  the Git commit icon and seven-character hexadecimal SHAs in monospace badges,
+  without links to nonexistent commits.
+- Processing continues when navigating elsewhere. Returning to Versions preserves
+  progress; completion stays on this same table without a status-page handoff.
+- Published timestamps show measured elapsed time (seconds, minutes, hours, or
+  days ago), update while the page is open, and expose the exact time on hover.
+  Newly ingressed versions are timed from their simulated completion.
+- Provider rows and headers use the existing AWS provider artwork. Download
+  counts use the [Helios Flight download icon](https://github.com/hashicorp/design-system/blob/main/packages/flight-icons/svg/download-16.svg)
+  rather than text arrows when present. Newly published providers have blank
+  download cells and metrics: this prototype treats downloads as usage from the
+  organization's private registry, not global or GitHub release download totals.
+- All ingress state is simulated in memory and resets on refresh.
 
 ## GPG key workflows
 
@@ -65,16 +90,18 @@ previous alternate provider layout. Documentation remains illustrative content.
 
 Requested explorations that are intentionally different from those frames:
 
-- Manage is absent on the provider status page.
-- Errored queue rows stay neutral; the icon and “Version ingress incomplete”
+- Manage is absent on the combined Versions page.
+- Errored version rows stay neutral; the icon and “Ingress incomplete”
   message communicate the failure without a red row background.
-- The status alert has one “Delete provider from organization” action while
-  ingress is running or has errors. There is no separate Cancel action:
-  cancelling setup means deleting the provider. Nothing is removed before confirmation.
-  “Keep provider” resumes the queue. “Delete provider” removes the mock provider
-  and its versions from the list, preserving organization GPG keys.
-- Completed ingestion stays on the queue until “View provider” is selected,
-  giving reviewers time to inspect errors instead of automatically navigating.
+- The status alert offers “Cancel publishing” while ingress is running.
+  Confirmation pauses processing; “Continue publishing” resumes it. Confirming
+  cancellation stops active and queued versions without deleting the provider,
+  published versions, or organization GPG keys. Cancellation persists across navigation.
+- When processing finishes, including with errors, the alert's only action is
+  “View provider”. Canceled publishing also offers “View provider”.
+  Provider deletion remains a separate action in the overview's Manage menu.
+- Completed ingestion stays on the same Versions table. “View provider” opens
+  the overview, giving reviewers time to inspect errors instead of automatically navigating.
 
 These explorations have not been written back into the Figma design file.
 Provider deletion, like key creation, is simulated in memory and resets on refresh.

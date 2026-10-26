@@ -1,6 +1,54 @@
 import { React } from "./assets/react-runtime.js";
 
 const h = React.createElement;
+
+export function PublishedTime({ timestamp }) {
+  const [now, setNow] = React.useState(Date.now);
+  React.useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const seconds = Math.max(0, Math.floor((now - timestamp) / 1000));
+  const [value, unit] = seconds < 60
+    ? [seconds, "second"]
+    : seconds < 3600
+      ? [Math.floor(seconds / 60), "minute"]
+      : seconds < 86400
+        ? [Math.floor(seconds / 3600), "hour"]
+        : [Math.floor(seconds / 86400), "day"];
+  return h("time", {
+    dateTime: new Date(timestamp).toISOString(),
+    title: new Date(timestamp).toLocaleString(),
+  }, `${value} ${unit}${value === 1 ? "" : "s"} ago`);
+}
+
+export function ProviderIcon() {
+  return h("img", {
+    className: "provider-brand-icon",
+    src: "./assets/6aa6a.svg",
+    alt: "",
+  });
+}
+
+// Helios Flight download-16: https://github.com/hashicorp/design-system
+export function DownloadIcon() {
+  return h(
+    "svg",
+    {
+      className: "inline-icon",
+      width: 16,
+      height: 16,
+      viewBox: "0 0 16 16",
+      fill: "none",
+      "aria-hidden": true,
+    },
+    h("path", {
+      fill: "currentColor",
+      d: "M14.25 9a.75.75 0 0 1 .75.75v3A2.25 2.25 0 0 1 12.75 15h-9.5A2.25 2.25 0 0 1 1 12.75v-3a.75.75 0 0 1 1.5 0v3c0 .414.336.75.75.75h9.5a.75.75 0 0 0 .75-.75v-3a.75.75 0 0 1 .75-.75M8 1a.75.75 0 0 1 .75.75v6.59l1.95-2.1a.75.75 0 0 1 1.1 1.02l-3.25 3.5-.051.05a.75.75 0 0 1-.482.19h-.034a.75.75 0 0 1-.496-.203l-.025-.024-.013-.014L4.2 7.26a.75.75 0 0 1 1.1-1.022l1.95 2.1V1.75A.75.75 0 0 1 8 1",
+    }),
+  );
+}
+
 export const PROVIDERS = [
   {
     name: "aws-rds-aurora",
@@ -10,7 +58,7 @@ export const PROVIDERS = [
     repository: "hashi/aws-rds-aurora",
     version: "0.17.1",
     versions: ["0.17.1", "0.16.1"],
-    downloads: 123,
+    downloads: null,
   },
 ];
 
@@ -121,7 +169,7 @@ export function ProviderTable({ onSelectProvider, providers: items }) {
                 "td",
                 null,
                 button(
-                  provider.name,
+                  h(React.Fragment, null, h(ProviderIcon), provider.name),
                   () => onSelectProvider(provider),
                   "provider-name-link",
                 ),
@@ -131,14 +179,16 @@ export function ProviderTable({ onSelectProvider, providers: items }) {
                 "td",
                 null,
                 provider.version,
-                h("small", null, "Published just now"),
+                h("small", null, "Published ", h(PublishedTime, { timestamp: provider.publishedAt })),
               ),
               h(
                 "td",
                 null,
                 h("span", { className: "neutral-badge" }, "GitHub Releases"),
               ),
-              h("td", null, provider.downloads),
+              h("td", null, provider.downloads === null
+                ? null
+                : h(React.Fragment, null, h(DownloadIcon), " ", provider.downloads)),
               h("td", null, "Private"),
               h("td", null, provider.namespace),
             ),
@@ -371,6 +421,8 @@ export function ProviderDetails({
   onViewVersions,
   onManageKeys,
   onDeleteProvider,
+  ingressComplete,
+  failedVersions,
   Header,
 }) {
   const [tab, setTab] = React.useState("files");
@@ -414,11 +466,11 @@ export function ProviderDetails({
       { className: "provider-metadata" },
       h("span", null, `By ${provider.namespace}`),
       h("span", null, `Version ${version}`),
-      h("span", null, "◷ Published just now"),
-      h("span", null, "⇩ Provisions ~600"),
+      h("span", null, "◷ Published ", h(PublishedTime, { timestamp: provider.publishedTimes[version] })),
+      h("span", null, h(DownloadIcon), " Provisions ~600"),
       h("span", null, "◇ Tags 5"),
     ),
-    showWarning &&
+    showWarning && (!ingressComplete || failedVersions.length > 0) &&
       h(
         "section",
         { className: "provider-warning-alert" },
@@ -429,12 +481,16 @@ export function ProviderDetails({
           h(
             "strong",
             null,
-            "Provider is usable, but some versions have errors.",
+            !ingressComplete
+              ? "Provider version ingress is in progress."
+              : "Provider is usable, but some versions have errors.",
           ),
           h(
             "p",
             null,
-            "Provider versions 0.14.1 and 0.15.1 have incomplete version ingress.",
+            !ingressComplete
+              ? "Follow publishing progress and review errors in Versions."
+              : `Provider versions ${failedVersions.join(" and ")} have incomplete version ingress.`,
           ),
           button("See all versions", onViewVersions),
         ),
@@ -506,7 +562,7 @@ export function ProviderDetails({
             provider.repository,
           ),
         ),
-        stat("Published", "just now"),
+        stat("Published", h(PublishedTime, { timestamp: provider.publishedTimes[version] })),
       ),
       h(
         "div",
@@ -603,6 +659,20 @@ export function ConfirmProviderDeletion({ onClose, onConfirm }) {
       { className: "modal-footer" },
       button("Delete provider", onConfirm, "action-button danger"),
       button("Keep provider", onClose),
+    ),
+  );
+}
+
+export function ConfirmPublishingCancellation({ onClose, onConfirm }) {
+  return h(
+    Modal,
+    { title: "Cancel publishing?", onClose },
+    h("div", { className: "modal-body" },
+      h("p", null, "Stop publishing the active and queued versions? Versions already published will remain available in your private registry. The provider and organization GPG keys will not be deleted."),
+    ),
+    h("div", { className: "modal-footer" },
+      button("Cancel publishing", onConfirm, "action-button danger"),
+      button("Continue publishing", onClose),
     ),
   );
 }
