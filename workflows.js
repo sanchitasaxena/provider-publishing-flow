@@ -2,6 +2,74 @@ import { React } from "./assets/react-runtime.js";
 
 const h = React.createElement;
 
+// Icons are vendored from HashiCorp's Helios Flight library.
+export function FlightIcon({ name }) {
+  return h("span", {
+    className: "flight-icon",
+    "aria-hidden": true,
+    style: { "--flight-icon": `url("./assets/flight-${name}-16.svg")` },
+  });
+}
+
+export function navigateMenu(event) {
+  if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+  event.preventDefault();
+  const items = [...event.currentTarget.querySelectorAll('[role="menuitem"]:not(:disabled)')];
+  const index = items.indexOf(document.activeElement);
+  const next = event.key === "Home" ? 0
+    : event.key === "End" ? items.length - 1
+    : (index + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+  items[next]?.focus();
+}
+
+function ActionMenu({ label, items, className }) {
+  const [open, setOpen] = React.useState(false);
+  const root = React.useRef(null);
+  const toggle = React.useRef(null);
+  const menuId = React.useId();
+  React.useEffect(() => {
+    if (!open) return;
+    root.current.querySelector('[role="menuitem"]')?.focus();
+    const closeOutside = (event) => {
+      if (!root.current?.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    return () => document.removeEventListener("pointerdown", closeOutside);
+  }, [open]);
+  return h("div", {
+    className,
+    ref: root,
+    onBlur: (event) => {
+      if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+    },
+    onKeyDown: (event) => {
+      if (event.key === "Escape" && open) {
+        event.preventDefault();
+        setOpen(false);
+        toggle.current.focus();
+      }
+      if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+      if (!open) {
+        event.preventDefault();
+        setOpen(true);
+      } else {
+        navigateMenu(event);
+      }
+    },
+  },
+  button(h(React.Fragment, null, label, h(FlightIcon, { name: open ? "chevron-up" : "chevron-down" })),
+    () => setOpen(!open), `action-button ${label === "Manage" ? "secondary" : "primary"}`, {
+      ref: toggle, "aria-expanded": open, "aria-haspopup": "menu", "aria-controls": menuId,
+    }),
+  open && h("div", { className: "provider-menu", id: menuId, role: "menu", "aria-label": label },
+    items.map((item) => button(item.label, () => {
+      setOpen(false);
+      toggle.current.focus();
+      item.onClick();
+    }, item.danger ? "danger" : "", { key: item.label, role: "menuitem", tabIndex: -1 })),
+  ));
+}
+
 export function PublishedTime({ timestamp }) {
   const [now, setNow] = React.useState(Date.now);
   React.useEffect(() => {
@@ -242,7 +310,7 @@ function CodeBlock({ value, label }) {
   return h(
     "section",
     { className: "prototype-code-block", "aria-label": label },
-    button(status ? "✓" : "⧉", copy, "prototype-code-copy", {
+    button(h(FlightIcon, { name: status ? "check" : "copy" }), copy, "prototype-code-copy", {
       "aria-label": `Copy ${label}`,
     }),
     h(
@@ -424,57 +492,42 @@ export function ProviderDetails({
   ingressComplete,
   failedVersions,
   Header,
+  isAdmin,
+  contentTab,
+  onContentTabChange,
 }) {
-  const [tab, setTab] = React.useState("files");
+  const tab = contentTab;
   const [version, setVersion] = React.useState(provider.version);
   const [showWarning, setShowWarning] = React.useState(true);
   const [usageTab, setUsageTab] = React.useState("workspaces");
-  const [manageOpen, setManageOpen] = React.useState(false);
-  const [actionsOpen, setActionsOpen] = React.useState(false);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const versionSelectId = React.useId();
   return h(
     "main",
     { className: "main-content provider-detail-page" },
     h(Header, { current: version, onBack, showManage: false }),
-    h(
-      "div",
-      { className: "provider-manage-menu" },
-      button(
-        `Manage ${manageOpen ? "⌃" : "⌄"}`,
-        () => setManageOpen(!manageOpen),
-        "action-button secondary",
-        { "aria-expanded": manageOpen, "aria-haspopup": "menu" },
-      ),
-      manageOpen &&
-        h(
-          "div",
-          { className: "provider-menu", role: "menu" },
-          button("Manage GPG Key", onManageKeys, "", { role: "menuitem" }),
-          button(
-            "Delete provider",
-            () => {
-              setManageOpen(false);
-              setDeleteOpen(true);
-            },
-            "danger",
-            { role: "menuitem" },
-          ),
-        ),
-    ),
+    isAdmin && h(ActionMenu, {
+      label: "Manage",
+      className: "provider-manage-menu",
+      items: [
+        { label: "Manage GPG Key", onClick: onManageKeys },
+        { label: "Delete provider", onClick: () => setDeleteOpen(true), danger: true },
+      ],
+    }),
     h(
       "div",
       { className: "provider-metadata" },
       h("span", null, `By ${provider.namespace}`),
       h("span", null, `Version ${version}`),
-      h("span", null, "◷ Published ", h(PublishedTime, { timestamp: provider.publishedTimes[version] })),
+      h("span", null, h(FlightIcon, { name: "clock" }), " Published ", h(PublishedTime, { timestamp: provider.publishedTimes[version] })),
       h("span", null, h(DownloadIcon), " Provisions ~600"),
-      h("span", null, "◇ Tags 5"),
+      h("span", null, h(FlightIcon, { name: "tag" }), " Tags 5"),
     ),
-    showWarning && (!ingressComplete || failedVersions.length > 0) &&
+    isAdmin && showWarning && (!ingressComplete || failedVersions.length > 0) &&
       h(
         "section",
         { className: "provider-warning-alert" },
-        h("span", { className: "warning-mark", "aria-hidden": true }, "△"),
+        h(FlightIcon, { name: "alert-triangle" }),
         h(
           "div",
           null,
@@ -494,7 +547,7 @@ export function ProviderDetails({
           ),
           button("See all versions", onViewVersions),
         ),
-        button("×", () => setShowWarning(false), "dismiss-button", {
+        button(h(FlightIcon, { name: "x" }), () => setShowWarning(false), "dismiss-button", {
           "aria-label": "Dismiss alert",
         }),
       ),
@@ -504,9 +557,9 @@ export function ProviderDetails({
       h("h2", null, "Provider details"),
       h("p", null, provider.description),
       h(
-        "label",
+        "div",
         { className: "version-select-field" },
-        h("span", null, "Select version"),
+        h("label", { htmlFor: versionSelectId }, "Select version"),
         h(
           "span",
           { className: "version-select-row" },
@@ -514,6 +567,7 @@ export function ProviderDetails({
             "select",
             {
               "aria-label": "Select version",
+              id: versionSelectId,
               value: version,
               onChange: (event) => setVersion(event.target.value),
             },
@@ -525,24 +579,11 @@ export function ProviderDetails({
               ),
             ),
           ),
-          h(
-            "span",
-            { className: "provider-actions-menu" },
-            button(
-              "Actions ⌄",
-              () => setActionsOpen(!actionsOpen),
-              "action-button primary",
-              { "aria-expanded": actionsOpen, "aria-haspopup": "menu" },
-            ),
-            actionsOpen &&
-              h(
-                "span",
-                { className: "provider-menu", role: "menu" },
-                button("View all versions", onViewVersions, "", {
-                  role: "menuitem",
-                }),
-              ),
-          ),
+          isAdmin && h(ActionMenu, {
+            label: "Actions",
+            className: "provider-actions-menu",
+            items: [{ label: "View all versions", onClick: onViewVersions }],
+          }),
         ),
       ),
       h(
@@ -571,12 +612,12 @@ export function ProviderDetails({
           "section",
           { className: "release-files" },
           tabs(
-            [
+            isAdmin ? [
               ["files", "Release Files"],
               ["docs", "Documentation"],
-            ],
+            ] : [["docs", "Documentation"]],
             tab,
-            setTab,
+            onContentTabChange,
             "provider-content",
           ),
           h(
@@ -592,9 +633,9 @@ export function ProviderDetails({
                   React.Fragment,
                   null,
                   h("h3", null, "Release Files"),
-                  h("p", { className: "upload-success" }, "✓ Uploaded (0)"),
+                  h("p", { className: "upload-success" }, h(FlightIcon, { name: "check" }), " Uploaded (0)"),
                   h("small", null, "No files uploaded"),
-                  h("p", { className: "upload-warning" }, "▲ Missing (2)"),
+                  h("p", { className: "upload-warning" }, h(FlightIcon, { name: "alert-triangle" }), " Missing (2)"),
                   h("small", null, "SHA256SUMS"),
                   h("small", null, "SHA256SUMS.sig"),
                 ),
@@ -677,15 +718,30 @@ export function ConfirmPublishingCancellation({ onClose, onConfirm }) {
   );
 }
 
-function Modal({ title, onClose, children, onSubmit }) {
+export function Modal({ title, onClose, children, onSubmit }) {
   const ref = React.useRef(null);
   const titleId = React.useId();
+  const closeRef = React.useRef(onClose);
+  closeRef.current = onClose;
   React.useEffect(() => {
     const previous = document.activeElement;
     const dialog = ref.current;
+    const background = [];
+    let layer = dialog.closest(".modal-overlay");
+    while (layer && layer !== document.body) {
+      for (const sibling of layer.parentElement.children) {
+        if (sibling !== layer) {
+          background.push([sibling, sibling.inert]);
+          sibling.inert = true;
+        }
+      }
+      layer = layer.parentElement;
+    }
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     dialog.querySelector("input, button")?.focus();
     function onKey(event) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") closeRef.current();
       if (event.key !== "Tab") return;
       const elements = [
         ...dialog.querySelectorAll(
@@ -706,9 +762,11 @@ function Modal({ title, onClose, children, onSubmit }) {
     dialog.addEventListener("keydown", onKey);
     return () => {
       dialog.removeEventListener("keydown", onKey);
+      background.forEach(([element, inert]) => { element.inert = inert; });
+      document.body.style.overflow = overflow;
       previous?.focus();
     };
-  }, [onClose]);
+  }, []);
   return h(
     "div",
     {
@@ -724,7 +782,7 @@ function Modal({ title, onClose, children, onSubmit }) {
         "div",
         { className: "modal-header" },
         h("h2", { id: titleId }, title),
-        button("×", onClose, "dismiss-button", { "aria-label": "Close" }),
+        button(h(FlightIcon, { name: "x" }), onClose, "dismiss-button", { "aria-label": "Close" }),
       ),
       children,
     ),

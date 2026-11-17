@@ -3,6 +3,27 @@
 Static, clickable prototype. Serve this directory over HTTP and open `index.html`.
 No build step or backend is required.
 
+## Admin and non-admin prototype options
+
+Use the header's **Prototype view** selector to switch between two previews:
+
+- **Admin** (default): provider overview, documentation, the combined version
+  queue/list, completed-queue filters, publishing, GPG management, and deletion.
+  Tags remains visible but disabled because tag management is not prototyped.
+- **Non-admin**: read-only provider overview, documentation, usage snippets, and
+  a selector containing published versions only. Versions, Tags, Release Files,
+  Manage, Actions, ingress warnings, publishing, and GPG management are hidden.
+
+Switching to Non-admin while viewing Versions returns to the provider overview.
+Switching from publishing setup or GPG management returns to the library.
+Role changes close management dialogs; simulated ingestion continues without
+losing progress, including when leaving an open cancellation confirmation.
+Switching back to Admin restores management access.
+
+This selector simulates visibility only. It is not authentication or backend
+authorization; production APIs must enforce permissions separately. The role
+and other simulated state reset on refresh.
+
 ## Provider documentation
 
 1. Open **Private Library** and select **Providers**.
@@ -20,9 +41,34 @@ No build step or backend is required.
   [provider publishing requirements](https://developer.hashicorp.com/terraform/cloud-docs/registry/publish-providers).
 - Publishing opens **Versions** directly. The status summary and version rows
   update in place through Queued, Publishing, Published, and Ingress incomplete.
-- Search by version or filter by status. Expand incomplete versions to review
-  illustrative errors and access the release-file requirements. Error rows have
-  a contrasting accordion chevron that points down when closed and up when open.
+- Search and **Filters** become available only after the version queue finishes
+  or is canceled. The active queue always shows every version, without a filter
+  toolbar, search, or applied-filter controls.
+  Filter the completed list by **Status** and **Environments**.
+  Status choices contain only final states present in the list: Published,
+  Ingress incomplete, and (after cancellation) Canceled. Publishing and Queued
+  are not filter choices; progress indicators remain in the active queue.
+  The toolbar follows the Private Library pattern and the
+  [HDS Filter Bar](https://helios.hashicorp.design/components/filter-bar):
+  categories on the left, multi-select values on the right, **Clear selection**
+  for the current category, and **Clear all filters** for both categories.
+  Filtering remains live; there is no separate Apply step.
+  Multiple values within a category use OR; Status, Environments, and search
+  combine using AND. Counts reflect the full completed version dataset.
+- Development, Staging, and Production are illustrative environment tags on
+  mock versions, independent of ingress status, not real environment bindings.
+  Tags appear below each version to make the filter results inspectable.
+  Applied filters appear as removable `Category: value` tags with **Clear all**.
+  Their section starts collapsed when empty, expands when a value is selected,
+  and can be collapsed manually. Escape, an outside click, or leaving the
+  dropdown dismisses it; Escape returns focus to Filters.
+- Expand incomplete versions to review illustrative errors and access the
+  release-file requirements. Error rows have a contrasting accordion chevron
+  that points down when closed and up when open; details expand smoothly.
+- The table briefly shows skeleton rows on load. Fixed column widths keep the
+  layout steady as statuses change, and status changes, alert changes, and
+  filter results fade in. Motion is disabled when
+  `prefers-reduced-motion` is set.
 - The combined table retains commit references from the original status queue
   (the original Versions table did not include them). Illustrative commits use
   the Git commit icon and seven-character hexadecimal SHAs in monospace badges,
@@ -69,6 +115,16 @@ their styles. The original asset bundle now supplies the existing React runtime.
 ## Visual styling
 
 New screens reuse the exported Helios palette, surface radii, and typography.
+Provider metadata, status, copy, dismiss, tag, and dropdown controls use vendored
+[Helios Flight icons](https://github.com/hashicorp/design-system/tree/main/packages/flight-icons/svg)
+rather than text-symbol substitutes. Manage and Actions support arrow-key
+navigation, Home/End, Escape with focus restoration, outside-click dismissal,
+and closing when focus leaves. The filter dropdown focuses its active category,
+supports vertical arrow-key category navigation and native checkbox keyboard
+interaction, and closes on Escape or focus leaving.
+Search ignores leading/trailing whitespace. Publishing setup now uses
+the same focus-trapping confirmation dialog as the other workflows. Reduced
+motion also disables loading spinners, queue pulses, and navigation transitions.
 All HCL examples share a dark code block with a compact copy control,
 keyboard-accessible horizontal scrolling, and explicit copy success/failure
 feedback. The color, spacing, and border values follow the

@@ -9,7 +9,10 @@ import {
   PROVIDERS,
   ProviderIcon,
   PublishedTime,
-} from "./workflows.js?v=version-details-2";
+  FlightIcon,
+  Modal,
+  navigateMenu,
+} from "./workflows.js?v=role-views-1";
 var C = {
     arrowRight: `./assets/816b2.svg`,
     aws: `./assets/6aa6a.svg`,
@@ -79,15 +82,16 @@ var C = {
 function w({ src: e, alt: t = `` }) {
   return b.createElement(`img`, { alt: t, src: e });
 }
-function T({ children: e, className: t = ``, onClick: n, type: r = `button` }) {
+function T({ children: e, className: t = ``, onClick: n, type: r = `button`, ...props }) {
   return b.createElement(`button`, {
+    ...props,
     className: `action-button ${t}`,
     onClick: n,
     type: r,
     children: e,
   });
 }
-function E() {
+function E({ role, onRoleChange }) {
   return b.createElement(
     `header`,
     {
@@ -120,6 +124,16 @@ function E() {
       {
         className: `utility-nav`,
       },
+      b.createElement(`label`, { className: `prototype-role-switch` },
+        b.createElement(`span`, {}, `Prototype view`),
+        b.createElement(`select`, {
+          "aria-label": `Prototype view`,
+          value: role,
+          onChange: (event) => onRoleChange(event.target.value),
+        },
+        b.createElement(`option`, { value: `admin` }, `Admin`),
+        b.createElement(`option`, { value: `non-admin` }, `Non-admin`)),
+      ),
       b.createElement(`button`, {
         "aria-label": `Search`,
         className: `utility-button`,
@@ -155,8 +169,9 @@ function ne({
   onNavigate: n,
   onToggle: r,
   providerName,
+  isAdmin,
 }) {
-  return e === `status` || e === `details` || e === `versions`
+  return e === `status` || e === `details` || e === `versions` || e === `documentation`
     ? b.createElement(
         `aside`,
         {
@@ -186,18 +201,29 @@ function ne({
                 {},
                 b.createElement(`button`, {
                   className: `nav-item ${e === `details` ? `active` : ``}`,
+                  "aria-current": e === `details` ? `page` : undefined,
                   onClick: () => n(`details`),
                   type: `button`,
                   children: `Overview`,
                 }),
                 b.createElement(`button`, {
+                  className: `nav-item ${e === `documentation` ? `active` : ``}`,
+                  "aria-current": e === `documentation` ? `page` : undefined,
+                  onClick: () => n(`documentation`),
+                  type: `button`,
+                  children: `Documentation`,
+                }),
+                isAdmin && b.createElement(`button`, {
                   className: `nav-item ${e === `versions` || e === `status` ? `active` : ``}`,
+                  "aria-current": e === `versions` || e === `status` ? `page` : undefined,
                   onClick: () => n(`versions`),
                   type: `button`,
                   children: `Versions`,
                 }),
-                b.createElement(`button`, {
+                isAdmin && b.createElement(`button`, {
                   className: `nav-item`,
+                  disabled: true,
+                  title: `Tag management is not included in this prototype`,
                   type: `button`,
                   children: `Tags`,
                 }),
@@ -245,7 +271,7 @@ function ne({
             type: `button`,
             children: `Public Namespaces`,
           }),
-          b.createElement(`button`, {
+          isAdmin && b.createElement(`button`, {
             className: `nav-item ${e === `gpg` ? `active` : ``}`,
             onClick: () => n(`gpg`),
             type: `button`,
@@ -275,6 +301,9 @@ function D({ scope: e, menu: t = !1 }) {
 }
 function re({ open: e, onOpenChange: t, onSelect: n }) {
   let r = (0, b.useRef)(null);
+  b.useEffect(() => {
+    if (e) r.current?.querySelector(`[role="menuitem"]`)?.focus();
+  }, [e]);
   return (
     (0, b.useEffect)(() => {
       function e(e) {
@@ -290,11 +319,26 @@ function re({ open: e, onOpenChange: t, onSelect: n }) {
       {
         className: `new-key-menu`,
         ref: r,
+        onBlur: (event) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) t(false);
+        },
+        onKeyDown: (event) => {
+          if (event.key === `Escape`) {
+            t(false);
+            r.current?.querySelector(`.new-key-toggle`)?.focus();
+          }
+        },
       },
       b.createElement(
         T,
         {
           className: `primary new-key-toggle`,
+          "aria-expanded": e,
+          "aria-controls": `new-key-options`,
+          "aria-haspopup": `menu`,
+          onKeyDown: (event) => {
+            if (event.key === `ArrowDown`) { event.preventDefault(); t(true); }
+          },
           onClick: () => t(!e),
         },
         b.createElement(
@@ -312,11 +356,16 @@ function re({ open: e, onOpenChange: t, onSelect: n }) {
           `div`,
           {
             className: `new-key-popover`,
+            id: `new-key-options`,
+            role: `menu`,
+            "aria-label": `GPG key scope`,
+            onKeyDown: navigateMenu,
           },
           b.createElement(
             `button`,
             {
               className: `scope-option`,
+              role: `menuitem`,
               onClick: () => n(`private`),
               type: `button`,
             },
@@ -344,6 +393,7 @@ function re({ open: e, onOpenChange: t, onSelect: n }) {
             `button`,
             {
               className: `scope-option`,
+              role: `menuitem`,
               onClick: () => n(`public`),
               type: `button`,
             },
@@ -660,7 +710,7 @@ function fe({
               },
               b.createElement(`span`, {
                 className: `option-check`,
-                children: `✓`,
+                children: b.createElement(FlightIcon, { name: `check` }),
               }),
               b.createElement(w, { src: C.github }),
               b.createElement(`span`, { children: `hashi` }),
@@ -685,7 +735,7 @@ function fe({
                 href: `https://docs.github.com/en/authentication/managing-commit-signature-verification/generating-a-new-gpg-key`,
                 rel: `noreferrer`,
                 target: `_blank`,
-                children: `Add GPG key ↗`,
+                children: b.createElement(b.Fragment, {}, `Add GPG key `, b.createElement(w, { src: C.externalLink })),
               }),
             ),
             b.createElement(
@@ -712,7 +762,7 @@ function fe({
                 href: `https://docs.github.com/en/authentication/managing-commit-signature-verification/generating-a-new-gpg-key`,
                 rel: `noreferrer`,
                 target: `_blank`,
-                children: `Add GPG key ↗`,
+                children: b.createElement(b.Fragment, {}, `Add GPG key `, b.createElement(w, { src: C.externalLink })),
               }),
             ),
             b.createElement(`div`, {
@@ -795,7 +845,7 @@ function fe({
                   o === e &&
                     b.createElement(`span`, {
                       className: `option-check`,
-                      children: `✓`,
+                      children: b.createElement(FlightIcon, { name: `check` }),
                     }),
                   b.createElement(`span`, { children: e }),
                 ),
@@ -933,6 +983,7 @@ var me = [
   `aws-lambda-api-gateway`,
 ];
 function he({
+  isAdmin,
   hasPrivateGpgKey: e,
   onAddGpgKey: t,
   onDismissToast: n,
@@ -948,6 +999,9 @@ function he({
 }) {
   let [c, l] = (0, b.useState)(!1),
     u = (0, b.useRef)(null);
+  b.useEffect(() => {
+    if (c) u.current?.querySelector(`[role="menuitem"]:not(:disabled)`)?.focus();
+  }, [c]);
   (0, b.useEffect)(() => {
     function e(e) {
       u.current?.contains(e.target) || l(!1);
@@ -1005,16 +1059,31 @@ function he({
           className: `secondary`,
           children: `Search public registry`,
         }),
-        b.createElement(
+        isAdmin && b.createElement(
           `div`,
           {
             className: `publish-menu`,
             ref: u,
+            onBlur: (event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) l(false);
+            },
+            onKeyDown: (event) => {
+              if (event.key === `Escape`) {
+                l(false);
+                u.current?.querySelector(`.publish-button`)?.focus();
+              }
+            },
           },
           b.createElement(
             T,
             {
               className: `primary publish-button`,
+              "aria-expanded": c,
+              "aria-controls": `publish-options`,
+              "aria-haspopup": `menu`,
+              onKeyDown: (event) => {
+                if (event.key === `ArrowDown`) { event.preventDefault(); l(true); }
+              },
               onClick: () => l((e) => !e),
             },
             b.createElement(
@@ -1033,6 +1102,9 @@ function he({
               {
                 className: `publish-popover`,
                 role: `menu`,
+                id: `publish-options`,
+                "aria-label": `Publish`,
+                onKeyDown: navigateMenu,
               },
               b.createElement(
                 `div`,
@@ -1068,6 +1140,7 @@ function he({
                 !e &&
                   b.createElement(`button`, {
                     className: `provider-add-key`,
+                    role: `menuitem`,
                     onClick: () => {
                       (l(!1), t());
                     },
@@ -1358,52 +1431,60 @@ function he({
   );
 }
 var ge = [
-  { version: `v0.12.0`, commit: `53ac67b`, status: `complete` },
-  { version: `v0.13.0`, commit: `89aec67`, status: `complete` },
+  { version: `v0.12.0`, commit: `53ac67b`, status: `complete`, environments: [`Production`] },
+  { version: `v0.13.0`, commit: `89aec67`, status: `complete`, environments: [`Staging`, `Production`] },
   {
     version: `v0.14.0`,
+    environments: [`Staging`],
     commit: `a68c67d`,
     status: `pending`,
     outcome: `complete`,
   },
   {
     version: `v0.14.1`,
+    environments: [`Development`],
     commit: `88a1b2c`,
     status: `pending`,
     outcome: `error`,
   },
   {
     version: `v0.15.0`,
+    environments: [`Production`],
     commit: `e34f9a0`,
     status: `pending`,
     outcome: `complete`,
   },
   {
     version: `v0.15.1`,
+    environments: [`Staging`],
     commit: `22ff61d`,
     status: `pending`,
     outcome: `error`,
   },
   {
     version: `v0.16.0`,
+    environments: [`Development`, `Staging`],
     commit: `fa77c22`,
     status: `pending`,
     outcome: `complete`,
   },
   {
     version: `v0.16.1`,
+    environments: [`Development`],
     commit: `9c8b7e6`,
     status: `pending`,
     outcome: `complete`,
   },
   {
     version: `v0.17.0`,
+    environments: [`Staging`],
     commit: `a2b4c6d`,
     status: `pending`,
     outcome: `complete`,
   },
   {
     version: `v0.17.1`,
+    environments: [`Development`],
     commit: `f1e3d5b`,
     status: `pending`,
     outcome: `complete`,
@@ -1464,7 +1545,7 @@ function _e({ current: e, showManage = true, onBack }) {
           b.createElement(`h1`, { children: `aws-rds-aurora` }),
           b.createElement(`span`, {
             className: `neutral-badge`,
-            children: `◇ Tag based`,
+            children: b.createElement(b.Fragment, {}, b.createElement(FlightIcon, { name: `tag` }), ` Tag based`),
           }),
         ),
         b.createElement(`p`, {
@@ -1520,13 +1601,13 @@ function ve({
         role: `status`,
       },
       cancelled
-        ? b.createElement(`span`, { className: `status-cancelled-mark`, children: `×` })
+        ? b.createElement(FlightIcon, { name: `minus-circle` })
         : hasErrors
         ? b.createElement(w, { src: C.statusWarning })
         : o
             ? b.createElement(`span`, {
                 className: `status-complete-mark`,
-                children: `✓`,
+                children: b.createElement(FlightIcon, { name: `check` }),
               })
             : b.createElement(`span`, {
                 className: `loading-icon`,
@@ -1569,7 +1650,7 @@ function ve({
           }),
       ),
     ),
-    b.createElement(xe, { rows, publishedTimes }),
+    b.createElement(xe, { rows, publishedTimes, filteringAvailable: o }),
     cancelOpen &&
       b.createElement(ConfirmPublishingCancellation, {
         onClose: () => setCancelOpen(false),
@@ -1577,10 +1658,17 @@ function ve({
       }),
   );
 }
-function xe({ rows, publishedTimes }) {
+function xe({ rows, publishedTimes, filteringAvailable }) {
   const [expanded, setExpanded] = b.useState([]);
   const [search, setSearch] = b.useState(``);
-  const [filter, setFilter] = b.useState(`all`);
+  const [filters, setFilters] = b.useState([]);
+  const [environments, setEnvironments] = b.useState([]);
+  const [filterGroup, setFilterGroup] = b.useState(`status`);
+  const [showApplied, setShowApplied] = b.useState(false);
+  const [filterOpen, setFilterOpen] = b.useState(false);
+  const [loading, setLoading] = b.useState(true);
+  const filterMenu = b.useRef(null);
+  const filterButton = b.useRef(null);
   const labels = {
     complete: `Published`,
     error: `Ingress incomplete`,
@@ -1588,10 +1676,77 @@ function xe({ rows, publishedTimes }) {
     queued: `Queued`,
     cancelled: `Canceled`,
   };
-  const visibleRows = rows.filter((row) =>
-    row.version.toLowerCase().includes(search.toLowerCase()) &&
-    (filter === `all` || row.status === filter),
+  const environmentOptions = [...new Set(rows.flatMap((row) => row.environments))].sort();
+  const statusOptions = Object.entries(labels).filter(([value]) =>
+    [`complete`, `error`, `cancelled`].includes(value) &&
+    rows.some((row) => row.status === value),
   );
+  const appliedCount = filters.length + environments.length;
+  const groups = [
+    { id: `status`, label: `Status`, count: filters.length },
+    { id: `environments`, label: `Environments`, count: environments.length },
+  ];
+  b.useEffect(() => {
+    const timer = window.setTimeout(() => setLoading(false), 450);
+    return () => window.clearTimeout(timer);
+  }, []);
+  b.useEffect(() => {
+    if (!filterOpen) return undefined;
+    filterMenu.current?.querySelector(`[role="tab"][aria-selected="true"]`)?.focus();
+    const closeOutside = (event) => {
+      if (!filterMenu.current?.contains(event.target)) setFilterOpen(false);
+    };
+    const closeOnEscape = (event) => {
+      if (event.key === `Escape`) {
+        setFilterOpen(false);
+        filterButton.current?.focus();
+      }
+    };
+    document.addEventListener(`pointerdown`, closeOutside);
+    document.addEventListener(`keydown`, closeOnEscape);
+    return () => {
+      document.removeEventListener(`pointerdown`, closeOutside);
+      document.removeEventListener(`keydown`, closeOnEscape);
+    };
+  }, [filterOpen]);
+  const toggleFilter = (value, group = `status`) => {
+    const update = group === `status` ? setFilters : setEnvironments;
+    update((items) =>
+      items.includes(value) ? items.filter((item) => item !== value) : [...items, value],
+    );
+    setShowApplied(true);
+  };
+  const clearSelections = () => {
+    setFilters([]);
+    setEnvironments([]);
+  };
+  const clearFilters = () => {
+    clearSelections();
+    setSearch(``);
+  };
+  const visibleRows = !filteringAvailable ? rows : rows.filter((row) =>
+    row.version.toLowerCase().includes(search.trim().toLowerCase()) &&
+    (filters.length === 0 || filters.includes(row.status)) &&
+    (environments.length === 0 || row.environments.some((value) => environments.includes(value))),
+  );
+  const hasQuery = appliedCount > 0 || search.trim() !== ``;
+  const statusIcon = (status) =>
+    b.createElement(
+      `span`,
+      { className: `version-status-icon`, "aria-hidden": true },
+      status === `queued` || status === `cancelled`
+        ? b.createElement(`span`, {
+            className: status === `queued` ? `queued-dot` : `cancelled-dot`,
+            children: status === `cancelled` ? b.createElement(FlightIcon, { name: `minus-circle` }) : null,
+          })
+        : b.createElement(`span`, {
+            className: status === `pending` ? `loading-icon` : ``,
+            children: b.createElement(w, {
+              src: status === `complete` ? C.statusCheck
+                : status === `error` ? C.statusError : C.loading,
+            }),
+          }),
+    );
   return b.createElement(
     `section`,
     {
@@ -1618,27 +1773,132 @@ function xe({ rows, publishedTimes }) {
       {
         className: `versions-table-shell`,
       },
+      filteringAvailable && b.createElement(b.Fragment, {},
       b.createElement(
         `div`,
         {
           className: `library-toolbar`,
         },
         b.createElement(
-          `label`,
+          `div`,
           {
-            className: `version-filter`,
+            className: `version-filter-menu`,
+            ref: filterMenu,
+            onBlur: (event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) setFilterOpen(false);
+            },
           },
-          `Status`,
-          b.createElement(`select`, {
-            value: filter,
-            onChange: (event) => setFilter(event.target.value),
-            children: [
-              [`all`, `All statuses`],
-              ...Object.entries(labels),
-            ].map(([value, label]) =>
-              b.createElement(`option`, { value, key: value }, label),
+          b.createElement(
+            `button`,
+            {
+              className: `filter-button ${appliedCount ? `active` : ``}`,
+              type: `button`,
+              ref: filterButton,
+              "aria-expanded": filterOpen,
+              "aria-controls": `version-filters`,
+              onKeyDown: (event) => {
+                if (event.key === `ArrowDown`) {
+                  event.preventDefault();
+                  setFilterOpen(true);
+                }
+              },
+              onClick: () => setFilterOpen((open) => !open),
+            },
+            b.createElement(w, { src: C.filter }),
+            `Filters`,
+            appliedCount > 0 &&
+              b.createElement(`span`, {
+                className: `filter-count`,
+                "aria-label": `${appliedCount} applied`,
+                children: appliedCount,
+              }),
+            b.createElement(w, { src: C.caretDown }),
+          ),
+          filterOpen &&
+            b.createElement(
+              `div`,
+              {
+                className: `filter-popover version-filter-popover`,
+                id: `version-filters`,
+                role: `group`,
+                "aria-label": `Filter versions`,
+              },
+              b.createElement(`div`, { className: `filter-panels` },
+                b.createElement(`div`, {
+                  className: `filter-categories`,
+                  role: `tablist`,
+                  "aria-label": `Filter categories`,
+                  "aria-orientation": `vertical`,
+                }, groups.map((group, index) =>
+                  b.createElement(`button`, {
+                    key: group.id,
+                    type: `button`,
+                    role: `tab`,
+                    id: `filter-category-${group.id}`,
+                    "aria-selected": filterGroup === group.id,
+                    "aria-controls": `filter-values`,
+                    tabIndex: filterGroup === group.id ? 0 : -1,
+                    onClick: () => setFilterGroup(group.id),
+                    onKeyDown: (event) => {
+                      const next = event.key === `ArrowDown` ? (index + 1) % groups.length
+                        : event.key === `ArrowUp` ? (index + groups.length - 1) % groups.length
+                        : event.key === `Home` ? 0 : event.key === `End` ? groups.length - 1 : null;
+                      if (next === null) return;
+                      event.preventDefault();
+                      setFilterGroup(groups[next].id);
+                      event.currentTarget.parentElement.querySelectorAll(`button`)[next].focus();
+                    },
+                  },
+                  group.label,
+                  group.count > 0 && b.createElement(`span`, { className: `filter-category-count` }, group.count),
+                  ),
+                )),
+                b.createElement(`div`, {
+                  className: `filter-values`,
+                  role: `tabpanel`,
+                  id: `filter-values`,
+                  "aria-labelledby": `filter-category-${filterGroup}`,
+                },
+              b.createElement(`p`, { className: `filter-popover-title`, children: filterGroup === `status` ? `Status` : `Environments` }),
+              (filterGroup === `status` ? statusOptions : environmentOptions.map((value) => [value, value])).map(([value, label]) =>
+                b.createElement(
+                  `label`,
+                  { className: `filter-option`, key: `${filterGroup}-${value}` },
+                  b.createElement(`input`, {
+                    type: `checkbox`,
+                    checked: (filterGroup === `status` ? filters : environments).includes(value),
+                    onChange: () => toggleFilter(value, filterGroup),
+                  }),
+                  filterGroup === `status` && statusIcon(value),
+                  b.createElement(`span`, { className: `filter-option-label`, children: label }),
+                  b.createElement(`span`, {
+                    className: `filter-option-count`,
+                    children: rows.filter((row) => filterGroup === `status`
+                      ? row.status === value : row.environments.includes(value)).length,
+                  }),
+                ),
+              ),
+              b.createElement(`button`, {
+                type: `button`,
+                className: `text-button filter-clear-selection`,
+                disabled: (filterGroup === `status` ? filters : environments).length === 0,
+                onClick: () => (filterGroup === `status` ? setFilters : setEnvironments)([]),
+                children: `Clear selection`,
+              }),
+              )),
+              b.createElement(
+                `div`,
+                { className: `filter-popover-footer` },
+                b.createElement(`button`, {
+                  type: `button`,
+                  className: `text-button`,
+                  disabled: appliedCount === 0,
+                  onClick: clearSelections,
+                  children: `Clear all filters`,
+                }),
+                b.createElement(`span`, { className: `filter-live-note`, children: `Filters apply instantly` }),
+              ),
             ),
-          }),
         ),
         b.createElement(
           `label`,
@@ -1648,49 +1908,136 @@ function xe({ rows, publishedTimes }) {
           b.createElement(w, { src: C.search }),
           b.createElement(`input`, {
             "aria-label": `Search versions`,
-            placeholder: `Search versions`,
+            placeholder: `Search`,
+            type: `search`,
             value: search,
             onChange: (event) => setSearch(event.target.value),
           }),
         ),
       ),
+      b.createElement(
+        `div`,
+        {
+          className: `no-filters version-filter-summary`,
+        },
+        b.createElement(`button`, {
+          type: `button`,
+          className: `applied-filters-toggle`,
+          "aria-expanded": showApplied,
+          "aria-controls": `applied-version-filters`,
+          onClick: () => setShowApplied((show) => !show),
+        },
+        b.createElement(FlightIcon, { name: showApplied ? `chevron-up` : `chevron-down` }),
+        appliedCount ? `${appliedCount} applied filter${appliedCount === 1 ? `` : `s`}` : `No filters applied`,
+        ),
+        b.createElement(`span`, {
+          className: `filter-result-count`,
+          "aria-live": `polite`,
+          children: loading ? `Loading versions…` : `${visibleRows.length} of ${rows.length} versions`,
+        }),
+      ),
+      b.createElement(`div`, { id: `applied-version-filters`, hidden: !showApplied, className: `applied-version-filters` },
+        appliedCount === 0
+          ? b.createElement(`span`, {}, `No filters applied`)
+          : b.createElement(
+              `div`,
+              { className: `filter-tags` },
+              [
+                ...filters.map((value) => ({ value, group: `status`, text: `Status: ${labels[value]}` })),
+                ...environments.map((value) => ({ value, group: `environments`, text: `Environments: ${value}` })),
+              ].map(({ value, group, text }) =>
+                b.createElement(
+                  `span`,
+                  { className: `filter-tag`, key: `${group}-${value}`, title: text },
+                  b.createElement(`span`, { className: `filter-tag-text` }, text),
+                  b.createElement(
+                    `button`,
+                    {
+                      type: `button`,
+                      "aria-label": `Remove ${group === `status` ? labels[value] : value} filter`,
+                      onClick: () => {
+                        toggleFilter(value, group);
+                        filterButton.current?.focus();
+                      },
+                    },
+                    b.createElement(w, { src: C.x }),
+                  ),
+                ),
+              ),
+              b.createElement(`button`, {
+                type: `button`,
+                className: `text-button`,
+                onClick: clearSelections,
+                children: `Clear all`,
+              }),
+            ),
+      ),
+      ),
       b.createElement(`div`, {
         className: `versions-table-wrap`,
+        "aria-busy": loading,
         children: b.createElement(
           `table`,
           {
             className: `versions-table`,
           },
+          b.createElement(
+            `colgroup`,
+            {},
+            b.createElement(`col`, { className: `col-version` }),
+            b.createElement(`col`, { className: `col-status` }),
+            b.createElement(`col`, { className: `col-published` }),
+            b.createElement(`col`, { className: `col-commit` }),
+            b.createElement(`col`, { className: `col-downloads` }),
+          ),
           b.createElement(`thead`, {
             children: b.createElement(
               `tr`,
               {},
-              b.createElement(`th`, { children: `Version` }),
-              b.createElement(`th`, { children: `Status` }),
-              b.createElement(`th`, { children: `Published` }),
-              b.createElement(`th`, { children: `Commit` }),
+              b.createElement(`th`, { scope: `col`, children: `Version` }),
+              b.createElement(`th`, { scope: `col`, children: `Status` }),
+              b.createElement(`th`, { scope: `col`, children: `Published` }),
+              b.createElement(`th`, { scope: `col`, children: `Commit` }),
               b.createElement(`th`, {
+                scope: `col`,
                 title: `Downloads from this organization's private registry, not global or GitHub release downloads.`,
                 children: `Downloads`,
               }),
             ),
           }),
           b.createElement(`tbody`, {
-            children: visibleRows.map((n) =>
-              b.createElement(
+            children: loading
+              ? Array.from({ length: 4 }, (_, index) =>
+                  b.createElement(
+                    `tr`,
+                    { key: `skeleton-${index}`, className: `version-skeleton-row`, "aria-hidden": true },
+                    [72, 120, 96, 84, 0].map((width, cell) =>
+                      b.createElement(`td`, {
+                        key: cell,
+                        children: width
+                          ? b.createElement(`span`, { className: `skeleton-bar`, style: { width } })
+                          : null,
+                      }),
+                    ),
+                  ),
+                )
+              : visibleRows.map((n) => {
+              const open = expanded.includes(n.version);
+              return b.createElement(
                 b.Fragment,
                 {
                   key: n.version,
                 },
                 b.createElement(
                   `tr`,
-                  {},
+                  { className: `version-row is-${n.status}` },
                   b.createElement(`td`, {
-                    children: n.status === `error` ? b.createElement(
+                    children: b.createElement(b.Fragment, {},
+                    n.status === `error` ? b.createElement(
                       `button`,
                       {
                         className: `version-expand`,
-                        "aria-expanded": expanded.includes(n.version),
+                        "aria-expanded": open,
                         "aria-controls": `error-${n.version}`,
                         onClick: () => setExpanded((items) =>
                           items.includes(n.version)
@@ -1720,33 +2067,33 @@ function xe({ rows, publishedTimes }) {
                       b.createElement(`strong`, {
                         children: n.version,
                       }),
-                    ) : b.createElement(`strong`, null, n.version),
+                    ) : b.createElement(`strong`, { className: `version-name` }, n.version),
+                    b.createElement(`span`, {
+                      className: `version-environments`,
+                      title: `Environments: ${n.environments.join(`, `)}`,
+                    }, b.createElement(FlightIcon, { name: `tag` }),
+                    b.createElement(`span`, {}, n.environments.join(`, `))),
+                    ),
                   }),
                   b.createElement(`td`, {
                     children: b.createElement(
                       `span`,
                       {
-                        className: `version-status ${n.status}`,
+                        className: `version-status ${n.status} cell-swap`,
+                        key: n.status,
                       },
-                      n.status === `queued` || n.status === `cancelled`
-                        ? b.createElement(`span`, {
-                            className: n.status === `queued` ? `queued-dot` : `cancelled-dot`,
-                            children: n.status === `cancelled` ? `×` : null,
-                          })
-                        : b.createElement(`span`, {
-                            className: n.status === `pending` ? `loading-icon` : ``,
-                            children: b.createElement(w, {
-                              src: n.status === `complete` ? C.statusCheck
-                                : n.status === `error` ? C.statusError : C.loading,
-                            }),
-                          }),
+                      statusIcon(n.status),
                       labels[n.status],
                     ),
                   }),
                   b.createElement(`td`, {
-                    children: n.status === `complete`
-                      ? b.createElement(PublishedTime, { timestamp: publishedTimes[n.version.slice(1)] })
-                      : `Not published`,
+                    children: b.createElement(
+                      `span`,
+                      { className: `cell-swap`, key: n.status === `complete` ? `published` : `unpublished` },
+                      n.status === `complete`
+                        ? b.createElement(PublishedTime, { timestamp: publishedTimes[n.version.slice(1)] })
+                        : b.createElement(`span`, { className: `version-muted` }, `Not published`),
+                    ),
                   }),
                   b.createElement(`td`, {
                     children: b.createElement(
@@ -1762,31 +2109,40 @@ function xe({ rows, publishedTimes }) {
                   b.createElement(`td`, {}),
                 ),
                 n.status === `error` &&
-                  expanded.includes(n.version) &&
                   b.createElement(`tr`, {
-                    className: `version-error-row`,
+                    className: `version-error-row ${open ? `open` : ``}`,
                     id: `error-${n.version}`,
                     children: b.createElement(`td`, {
                       colSpan: 5,
                       children: b.createElement(
                         `div`,
-                        {},
-                        b.createElement(`strong`, null, `Version ingress incomplete: VCS publishing error.`),
-                        b.createElement(`p`, null, `Check this release's required files and signing key, then publish a corrected release. Error details are illustrative in this prototype.`),
-                        b.createElement(`a`, {
-                          href: `https://developer.hashicorp.com/terraform/cloud-docs/registry/publish-providers`,
-                          target: `_blank`,
-                          rel: `noreferrer`,
-                          children: `Review required release files`,
-                        }),
+                        { className: `version-error-panel` },
+                        b.createElement(
+                          `div`,
+                          { className: `version-error-content` },
+                          b.createElement(`strong`, null, `Version ingress incomplete: VCS publishing error.`),
+                          b.createElement(`p`, null, `Check this release's required files and signing key, then publish a corrected release. Error details are illustrative in this prototype.`),
+                          b.createElement(`a`, {
+                            href: `https://developer.hashicorp.com/terraform/cloud-docs/registry/publish-providers`,
+                            target: `_blank`,
+                            rel: `noreferrer`,
+                            children: `Review required release files`,
+                          }),
+                        ),
                       ),
                     }),
                   }),
-              ),
-            ).concat(visibleRows.length ? [] : [
-                b.createElement(`tr`, { key: `empty` },
+              );
+            }).concat(visibleRows.length ? [] : [
+                b.createElement(`tr`, { key: `empty`, className: `version-row` },
                   b.createElement(`td`, { colSpan: 5, className: `prototype-empty` },
-                    `No versions match your search and status filter.`,
+                    b.createElement(`strong`, null, `No versions match your filters`),
+                    b.createElement(`p`, null, `Try a different version or status.`),
+                    hasQuery && b.createElement(T, {
+                      className: `secondary`,
+                      onClick: clearFilters,
+                      children: `Clear filters`,
+                    }),
                   ),
                 ),
             ]),
@@ -1880,33 +2236,12 @@ function k({ onCancel: e, onPublished: t }) {
         }),
     ),
     f &&
-      b.createElement(`div`, {
-        "aria-labelledby": `cancel-publishing-title`,
-        "aria-modal": `true`,
-        className: `modal-overlay`,
-        role: `dialog`,
+      b.createElement(Modal, {
+        title: `Stop publishing this provider?`,
+        onClose: () => p(!1),
         children: b.createElement(
-          `section`,
-          {
-            className: `modal cancel-publishing-modal`,
-          },
-          b.createElement(
-            `div`,
-            {
-              className: `modal-header`,
-            },
-            b.createElement(`h2`, {
-              id: `cancel-publishing-title`,
-              children: `Stop publishing this provider?`,
-            }),
-            b.createElement(`button`, {
-              "aria-label": `Close`,
-              className: `dismiss-button`,
-              onClick: () => p(!1),
-              type: `button`,
-              children: b.createElement(w, { src: C.x }),
-            }),
-          ),
+          b.Fragment,
+          {},
           b.createElement(`div`, {
             className: `modal-body`,
             children: b.createElement(`p`, {
@@ -1935,6 +2270,7 @@ function k({ onCancel: e, onPublished: t }) {
 }
 function Se() {
   let [e, t] = (0, b.useState)(`library`),
+    [role, setRole] = b.useState(`admin`),
     [n, r] = (0, b.useState)(`private`),
     [i, a] = (0, b.useState)(ee),
     [o, s] = (0, b.useState)(te),
@@ -1956,6 +2292,17 @@ function Se() {
       ])),
     ),
     v = n === `private` ? i : o;
+  const isAdmin = role === `admin`;
+  function changeRole(nextRole) {
+    setRole(nextRole);
+    d(null);
+    setDeleteKey(null);
+    l(false);
+    if (nextRole !== `admin`) setIngressPaused(false);
+    if (nextRole !== `admin` && [`versions`, `status`, `publish`, `gpg`].includes(e)) {
+      t([`versions`, `status`].includes(e) ? `details` : `library`);
+    }
+  }
   b.useEffect(() => {
     if (ingressPaused || ingressCancelled || ingressProgress >= ge.length) return;
     const timer = window.setTimeout(() => {
@@ -2016,7 +2363,7 @@ function Se() {
     {
       className: `app-shell ${f ? `nav-collapsed` : ``}`,
     },
-    b.createElement(E, {}),
+    b.createElement(E, { role, onRoleChange: changeRole }),
     b.createElement(ne, {
       activeView: e,
       collapsed: f,
@@ -2026,6 +2373,7 @@ function Se() {
       },
       onToggle: () => p((e) => !e),
       providerName: selectedProvider.name,
+      isAdmin,
     }),
     e === `publish`
       ? b.createElement(k, {
@@ -2042,6 +2390,7 @@ function Se() {
         })
       : e === `library`
         ? b.createElement(he, {
+            isAdmin,
             hasPrivateGpgKey: i.length > 0,
             onAddGpgKey: () => y(`private`),
             onDismissToast: () => _(!1),
@@ -2080,8 +2429,12 @@ function Se() {
               onPause: setIngressPaused,
               publishedTimes,
             })
-          : e === `details`
+          : e === `details` || e === `documentation`
             ? b.createElement(ProviderDetails, {
+                key: role,
+                isAdmin,
+                contentTab: e === `documentation` || !isAdmin ? `docs` : `files`,
+                onContentTabChange: (tab) => t(tab === `docs` ? `documentation` : `details`),
                 provider: { ...selectedProvider, ...providerVersions },
                 onBack: () => t(`library`),
                 onViewVersions: () => t(`versions`),
